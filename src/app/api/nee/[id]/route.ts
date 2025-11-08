@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { deleteNeeEntry, listNeeEntries, NeePayload, upsertNeeEntry } from '@/server/googleSheets/nee';
 
-type Params = { params: { id: string } };
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
-export async function PUT(request: Request, { params }: Params) {
-  const { id } = params;
+export async function PUT(request: Request, context: RouteContext) {
+  const { id } = await context.params;
 
   if (!id) {
     return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
@@ -28,14 +30,14 @@ export async function PUT(request: Request, { params }: Params) {
 
     return NextResponse.json(entry, { status: 200 });
   } catch (error) {
-    console.error(`PUT /api/nee/${id}`, error);
+    console.error('PUT /api/nee/:id', error);
     const message = error instanceof Error ? error.message : 'Error al actualizar la NEE';
     return NextResponse.json({ message }, { status: 500 });
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
-  const { id } = params;
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { id } = await context.params;
 
   if (!id) {
     return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
@@ -49,7 +51,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error(`DELETE /api/nee/${id}`, error);
+    console.error('DELETE /api/nee/:id', error);
     const message = error instanceof Error ? error.message : 'Error al eliminar la NEE';
     return NextResponse.json({ message }, { status: 500 });
   }
