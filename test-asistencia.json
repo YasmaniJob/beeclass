@@ -1,0 +1,9 @@
+{
+  "estudianteId": "12345678",
+  "grado": "1er Grado",
+  "seccion": "A",
+  "fecha": "2025-10-28",
+  "status": "presente",
+  "registradoPor": "Admin Test",
+  "observaciones": "Prueba de integración Google Sheets"
+}

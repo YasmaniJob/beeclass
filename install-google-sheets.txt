@@ -1,0 +1,2 @@
+npm install googleapis @google-cloud/local-auth --save
+npm install --save-dev @types/google.accounts
