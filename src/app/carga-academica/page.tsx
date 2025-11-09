@@ -21,7 +21,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import isEqual from 'lodash/isEqual';
 import { useDocentes } from '@/hooks/use-docentes';
 import { Docente } from '@/domain/entities/Docente';
-import { DocenteEditable, docenteToEditable, editableToDocente, cloneDocenteEditable } from '@/domain/mappers/docente-editable';
+import { 
+  docenteToEditable,
+  editableToDocente,
+  cloneDocenteEditable,
+  DocenteEditable,
+} from '@/domain/mappers/docente-editable';
 import { DocenteAsignacion } from '@/domain/entities/Docente';
 
 const DOC_COLUMN_WIDTH = 320;
@@ -515,8 +520,10 @@ export default function CargaAcademicaPage() {
   const tutoresGlobales = useMemo(() => {
     const registros: { docente: Docente; grado?: string; seccion?: string }[] = [];
 
-    localDocentes.forEach(docente => {
-      docente.asignaciones?.forEach(asignacion => {
+    localDocentes.forEach(docenteEditable => {
+      const docente = editableToDocente(docenteEditable);
+
+      docenteEditable.asignaciones?.forEach(asignacion => {
         if (!asignacion.areaId && asignacion.rol === 'Docente y Tutor') {
           registros.push({ docente, grado: asignacion.grado, seccion: asignacion.seccion });
         }
