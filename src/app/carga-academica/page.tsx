@@ -543,10 +543,11 @@ export default function CargaAcademicaPage() {
   }, [localDocentes]);
 
   const docentesDetalle = useMemo(() => {
-    return localDocentes.map(docente => {
+    return localDocentes.map(docenteEditable => {
+      const docente = editableToDocente(docenteEditable);
       const agrupado = new Map<string, { grado: string; seccion: string; areas: AreaCurricular[]; esTutor: boolean }>();
 
-      docente.asignaciones?.forEach(asignacion => {
+      docenteEditable.asignaciones?.forEach(asignacion => {
         const grado = asignacion.grado ?? '—';
         const seccion = asignacion.seccion ?? '—';
         const key = `${grado}::${seccion}`;
@@ -583,8 +584,9 @@ export default function CargaAcademicaPage() {
   const gradosSeccionesDetalle = useMemo(() => {
     const map = new Map<string, { grado: string; seccion: string; docentes: Map<string, { docente: Docente; areas: AreaCurricular[]; esTutor: boolean }> }>();
 
-    localDocentes.forEach(docente => {
-      docente.asignaciones?.forEach(asignacion => {
+    localDocentes.forEach(docenteEditable => {
+      const docente = editableToDocente(docenteEditable);
+      docenteEditable.asignaciones?.forEach(asignacion => {
         if (!asignacion.grado || !asignacion.seccion) {
           return;
         }
@@ -672,8 +674,9 @@ export default function CargaAcademicaPage() {
   const areasDetalle = useMemo(() => {
     const map = new Map<string, { area: AreaCurricular; asignaciones: { grado: string; seccion: string; docente: Docente; esTutor: boolean }[] }>();
 
-    localDocentes.forEach(docente => {
-      const asignaciones = docente.asignaciones || [];
+    localDocentes.forEach(docenteEditable => {
+      const docente = editableToDocente(docenteEditable);
+      const asignaciones = docenteEditable.asignaciones || [];
       asignaciones.forEach(asignacion => {
         if (!asignacion.areaId) return;
 
@@ -775,8 +778,9 @@ export default function CargaAcademicaPage() {
   const groupedTutores = useMemo<TutorAgrupado[]>(() => {
     const map = new Map<string, TutorAgrupado>();
 
-    localDocentes.forEach(docente => {
-      (docente.asignaciones || []).forEach(asignacion => {
+    localDocentes.forEach(docenteEditable => {
+      const docente = editableToDocente(docenteEditable);
+      (docenteEditable.asignaciones || []).forEach(asignacion => {
         if (asignacion.rol !== 'Docente y Tutor') return;
         const key = `${asignacion.grado}|${asignacion.seccion}`;
         if (!map.has(key)) {
@@ -789,7 +793,7 @@ export default function CargaAcademicaPage() {
 
         const entry = map.get(key)!;
         const existingDoc = entry.docentes.find(item => item.docente.numeroDocumento === docente.numeroDocumento);
-        const asignacionesDocente = (docente.asignaciones || []).filter(a => a.grado === asignacion.grado && a.seccion === asignacion.seccion);
+        const asignacionesDocente = (docenteEditable.asignaciones || []).filter(a => a.grado === asignacion.grado && a.seccion === asignacion.seccion);
 
         if (existingDoc) {
           asignacionesDocente.forEach(asig => {

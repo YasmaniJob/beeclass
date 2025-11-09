@@ -12,18 +12,39 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient<Datab
   }
 
   const cookieStore = await cookies();
+  type MutableCookieStore = {
+    set?: (options: { name: string; value: string } & Record<string, unknown>) => void;
+    delete?: (options: { name: string } & Record<string, unknown>) => void;
+  };
+  const mutableStore = cookieStore as unknown as MutableCookieStore;
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get: (name) => cookieStore.get(name)?.value,
       set: (name, value, options) => {
-        if (typeof (cookieStore as any).set === 'function') {
-          (cookieStore as any).set({ name, value, ...(options ?? {}) });
+        if (typeof mutableStore.set !== 'function') {
+          return;
+        }
+
+        try {
+          mutableStore.set({ name, value, ...(options ?? {}) });
+        } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('Supabase cookie set skipped outside Route Handler/Server Action', error);
+          }
         }
       },
       remove: (name, options) => {
-        if (typeof (cookieStore as any).delete === 'function') {
-          (cookieStore as any).delete({ name, ...(options ?? {}) });
+        if (typeof mutableStore.delete !== 'function') {
+          return;
+        }
+
+        try {
+          mutableStore.delete({ name, ...(options ?? {}) });
+        } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('Supabase cookie delete skipped outside Route Handler/Server Action', error);
+          }
         }
       },
     },
