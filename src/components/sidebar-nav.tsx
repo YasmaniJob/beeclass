@@ -94,12 +94,19 @@ function buildMenuSections(pathname: string, roles: RoleFlags): MenuSection[] {
       .map((sub) => ({
         href: sub.href,
         label: sub.label,
-        isActive: pathname.startsWith(sub.href),
+        isActive: pathname === sub.href || pathname.startsWith(sub.href + '/'),
       }));
 
+    // Lógica especial para asistencia que tiene rutas dinámicas como /asistencia/[grado]/[seccion]
+    const isAsistenciaRoute = item.href.startsWith('/asistencia') && 
+                              pathname.startsWith('/asistencia') &&
+                              !pathname.startsWith('/asistencia/aula'); // Excluir asistencia de aula
+    
     const isActive = children.length
       ? children.some((child) => child.isActive)
-      : pathname === item.href || (!!item.href && item.href !== "/" && pathname.startsWith(item.href));
+      : pathname === item.href || 
+        isAsistenciaRoute ||
+        (!!item.href && item.href !== "/" && pathname.startsWith(item.href + '/'));
 
     const entry: SectionItem = {
       href: item.href,

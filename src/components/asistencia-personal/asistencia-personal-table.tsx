@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, memo } from 'react';
 import { Docente } from '@/domain/entities/Docente';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,7 +26,7 @@ interface AsistenciaPersonalTableProps {
     isReadOnly?: boolean;
 }
 
-export function AsistenciaPersonalTable({ personal, asistencia, onStatusChange, onHorasChange, isReadOnly = false }: AsistenciaPersonalTableProps) {
+const AsistenciaPersonalTableComponent = ({ personal, asistencia, onStatusChange, onHorasChange, isReadOnly = false }: AsistenciaPersonalTableProps) => {
     const [horasSheetState, setHorasSheetState] = useState<{ isOpen: boolean; docente: Docente | null }>({ isOpen: false, docente: null });
     const [incidenteSheetState, setIncidenteSheetState] = useState<{ isOpen: boolean; docente: Docente | null }>({ isOpen: false, docente: null });
     const { horas: horasPedagogicas } = useHorasPedagogicas();
@@ -165,4 +165,6 @@ export function AsistenciaPersonalTable({ personal, asistencia, onStatusChange, 
             )}
         </>
     );
-}
+};
+
+export const AsistenciaPersonalTable = memo(AsistenciaPersonalTableComponent);

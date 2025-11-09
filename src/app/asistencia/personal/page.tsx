@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -43,13 +43,13 @@ export default function AsistenciaPersonalPage() {
     setIsClient(true);
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const success = await saveToGoogleSheets();
     if (!success) {
       // El error ya se muestra en el hook
       return;
     }
-  };
+  }, [saveToGoogleSheets]);
 
   const personalFiltrado = useMemo(() => {
     if (isLoading || !isClient) return [];
@@ -155,6 +155,7 @@ export default function AsistenciaPersonalPage() {
       {!isReadOnly && changedCount > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
           <Button 
+            type="button"
             size="lg" 
             onClick={handleSave} 
             className="shadow-lg"
