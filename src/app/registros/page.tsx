@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useAppConfig } from "@/hooks/use-app-config";
 import { hexToRgb } from "@/lib/colors";
 import type { RowInput } from "jspdf-autotable";
@@ -85,6 +86,7 @@ type NominaJsonResponse = {
     institution: string | null;
     nivel: string | null;
     anio: string;
+    docente?: string | null;
   };
 };
 
@@ -150,7 +152,12 @@ function normalizeCompetenciaGroups(
       .map((capacidad) => (capacidad ?? "").trim())
       .filter((capacidad) => capacidad.length > 0)
       .map((capacidad) => toSentenceCase(capacidad));
-    const subcolumns = capacities.length > 0 ? capacities : ["Registro"];
+    
+    // Agregar "Nivel de logro" después de cada capacidad
+    const subcolumns = capacities.length > 0 
+      ? [...capacities, "Nivel de logro"]
+      : ["Registro", "Nivel de logro"];
+    
     return {
       label,
       subcolumns,
@@ -252,32 +259,57 @@ async function generateNominaPdf(
   data: NominaJsonResponse,
   minimoFilas: number,
   filename: string,
+  isAdmin?: boolean,
+  branding?: { appName?: string; institutionName?: string; themeColor?: string; docenteNombreFallback?: string },
 ) {
   const { jsPDF, autoTable } = await loadPdfDependencies();
   const doc = new jsPDF({ orientation: "landscape" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const institutionBase = data.meta.institution?.trim() || "INSTITUCIÓN EDUCATIVA";
+  const primaryColor = branding?.themeColor ?? "#59AB45";
+  const { r: primaryR, g: primaryG, b: primaryB } = hexToRgb(primaryColor);
+
+  const institutionBase = (branding?.institutionName || data.meta.institution || "INSTITUCIÓN EDUCATIVA").trim();
   const institutionLabel = data.meta.nivel
     ? `${institutionBase.toUpperCase()} - ${data.meta.nivel.toUpperCase()}`
     : institutionBase.toUpperCase();
 
-  doc.setFontSize(14);
-  doc.text(institutionLabel, pageWidth / 2, 14, { align: "center" });
+  // Si es admin, dejar el nombre del docente en blanco
+  const docenteNombre = isAdmin ? "" : (data.meta.docente?.trim() || branding?.docenteNombreFallback || "");
 
-  const title = data.meta.area
-    ? `NÓMINA DE ASISTENCIA ${data.meta.anio} · ${data.meta.area.toUpperCase()}`
-    : `NÓMINA DE ASISTENCIA ${data.meta.anio}`;
-  doc.setFontSize(12);
-  doc.text(title, pageWidth / 2, 22, { align: "center" });
+  const headerTop = 12;
+  doc.setFillColor(primaryR, primaryG, primaryB);
+  doc.rect(10, headerTop, pageWidth - 20, 28, "F");
 
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text((branding?.appName || "ASISTENCIAFÁCIL").toUpperCase(), 16, headerTop + 8);
+
+  doc.setFontSize(16);
+  doc.text("NÓMINA DE ASISTENCIA", pageWidth / 2, headerTop + 9, { align: "center" });
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(institutionLabel, pageWidth / 2, headerTop + 17, { align: "center" });
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
   const subtitleParts = [
     `GRADO: ${data.meta.grado.toUpperCase()}`,
     `SECCIÓN: ${data.meta.seccion.toUpperCase()}`,
   ];
-  if (data.meta.area) {
-    subtitleParts.push(`ÁREA: ${data.meta.area.toUpperCase()}`);
-  }
-  doc.text(subtitleParts.join(" · "), pageWidth / 2, 30, { align: "center" });
+  doc.text(subtitleParts.join("  •  "), pageWidth / 2, headerTop + 24, { align: "center" });
+
+  doc.setFontSize(8);
+  doc.text(`AÑO: ${data.meta.anio}`, 16, headerTop + 17);
+  doc.text(`DOCENTE: ${docenteNombre || ""}`, 16, headerTop + 23);
+
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.4);
+  doc.line(16, headerTop + 26, pageWidth - 16, headerTop + 26);
+
+  doc.setTextColor(55, 55, 55);
+  doc.setFont("helvetica", "normal");
 
   const students = data.students ?? [];
   const totalRows = Math.max(minimoFilas, students.length);
@@ -312,18 +344,23 @@ async function generateNominaPdf(
   const observationIndex = 2 + NOMINA_WEEK_COUNT * NOMINA_DAYS.length;
 
   autoTable(doc, {
-    startY: 38,
+    startY: headerTop + 32,
     head: [headRow1, headRow2],
     body: bodyRows,
     theme: "grid",
+    margin: { left: 8, right: 8 },
     headStyles: {
-      fillColor: [28, 100, 242],
+      fillColor: [primaryR, primaryG, primaryB],
       textColor: 255,
-      halign: "center",
+      halign: "center" as const,
+      valign: "middle" as const,
       fontSize: 9,
+      cellPadding: 1.4,
+      fontStyle: "bold" as const,
     },
     bodyStyles: {
       fontSize: 8,
+      cellPadding: 1,
     },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
@@ -331,7 +368,8 @@ async function generateNominaPdf(
       [observationIndex]: { cellWidth: 26 },
     },
     styles: {
-      valign: "middle",
+      valign: "middle" as const,
+      overflow: "linebreak",
     },
   });
 
@@ -371,6 +409,7 @@ async function generateRegistroAuxiliarPdf(
   minimoFilas: number,
   filename: string,
   branding?: RegistroAuxiliarBranding,
+  isAdmin?: boolean,
 ) {
   const { jsPDF, autoTable } = await loadPdfDependencies();
   const doc = new jsPDF({ orientation: "landscape" });
@@ -383,7 +422,8 @@ async function generateRegistroAuxiliarPdf(
     ? `${institutionBase.toUpperCase()} - ${data.meta.nivel.toUpperCase()}`
     : institutionBase.toUpperCase();
 
-  const docenteNombre = data.meta.docente?.trim() || branding?.docenteNombreFallback || "";
+  // Si es admin, dejar el nombre del docente en blanco
+  const docenteNombre = isAdmin ? "" : (data.meta.docente?.trim() || branding?.docenteNombreFallback || "");
 
   const headerTop = 12;
   doc.setFillColor(primaryR, primaryG, primaryB);
@@ -412,7 +452,7 @@ async function generateRegistroAuxiliarPdf(
 
   doc.setFontSize(8);
   doc.text(`AÑO: ${data.meta.anio}`, 16, headerTop + 17);
-  doc.text(`DOCENTE: ${docenteNombre || "NO REGISTRADO"}`, 16, headerTop + 23);
+  doc.text(`DOCENTE: ${docenteNombre || ""}`, 16, headerTop + 23);
 
   doc.setDrawColor(255, 255, 255);
   doc.setLineWidth(0.4);
@@ -603,7 +643,7 @@ type DownloadAction = "nominaExcel" | "nominaPdf" | "registroExcel" | "registroP
 export default function RegistrosPage() {
   const router = useRouter();
   const { role, isLoading } = useRoleView();
-  const { isLoaded: dataLoaded, seccionesPorGrado, areasPorGrado, gradoSeccionCatalog } = useMatriculaData();
+  const { isLoaded: dataLoaded, seccionesPorGrado, areasPorGrado, gradoSeccionCatalog, docentes } = useMatriculaData();
   const { user } = useCurrentUser();
   const { appName, institutionName, themeColor } = useAppConfig();
 
@@ -611,16 +651,37 @@ export default function RegistrosPage() {
   const isDocente = role === "docente";
   const isPrivileged = role === "admin";
 
+  const [selectedDocenteId, setSelectedDocenteId] = useState<string>("__ninguno__");
+  
+  const docenteOptions = useMemo(() => {
+    return docentes
+      .filter(d => d.asignaciones && d.asignaciones.length > 0)
+      .map(d => ({
+        value: d.numeroDocumento,
+        label: `${d.apellidoPaterno} ${d.apellidoMaterno}, ${d.nombres}`,
+        docente: d
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  }, [docentes]);
+
+  const selectedDocente = useMemo(() => {
+    if (!selectedDocenteId || selectedDocenteId === "__ninguno__") return undefined;
+    return docentes.find(d => d.numeroDocumento === selectedDocenteId);
+  }, [docentes, selectedDocenteId]);
+
   const gradoOptions = useMemo(() => buildOptionsFromMap(seccionesPorGrado), [seccionesPorGrado]);
   const [grado, setGrado] = useState<string>("");
   const seccionOptions = useMemo(() => buildSections(seccionesPorGrado, grado), [seccionesPorGrado, grado]);
   const [seccion, setSeccion] = useState<string>("");
   const assignedAreaIds = useMemo(() => {
-    if (!user?.asignaciones?.length) {
+    // Si es admin y ha seleccionado un docente, usar las asignaciones del docente
+    const targetUser = isPrivileged && selectedDocente ? selectedDocente : user;
+    
+    if (!targetUser?.asignaciones?.length) {
       return [] as string[];
     }
 
-    return user.asignaciones
+    return targetUser.asignaciones
       .filter((assignment) => {
         if (!assignment.areaId) return false;
         const matchesGrado = !grado || assignment.grado === grado;
@@ -629,14 +690,47 @@ export default function RegistrosPage() {
       })
       .map((assignment) => assignment.areaId!)
       .filter((value, index, self) => self.indexOf(value) === index);
-  }, [user, grado, seccion]);
+  }, [user, selectedDocente, isPrivileged, grado, seccion]);
+
+  // Obtener todas las áreas únicas del sistema (para administradores)
+  const todasLasAreasDelSistema = useMemo(() => {
+    const todasLasAreas = Object.values(areasPorGrado).flat();
+    const areasUnicas = new Map<string, { id?: string | null; nombre?: string | null }>();
+    
+    todasLasAreas.forEach(area => {
+      const id = area.id ?? area.nombre ?? '';
+      if (id && !areasUnicas.has(id)) {
+        areasUnicas.set(id, area);
+      }
+    });
+    
+    return Array.from(areasUnicas.values())
+      .map(area => {
+        const value = (area.id ?? area.nombre ?? "").trim();
+        const label = (area.nombre ?? area.id ?? "").trim();
+        return value ? { value, label: label || value } : null;
+      })
+      .filter((option): option is SelectOption => Boolean(option))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  }, [areasPorGrado]);
 
   const areaOptions = useMemo(() => {
-    const allowed = isPrivileged ? undefined : assignedAreaIds;
-    return filterAreasByGrado(areasPorGrado, grado, allowed);
-  }, [areasPorGrado, grado, assignedAreaIds, isPrivileged]);
+    const hasNoDocenteSelected = !selectedDocenteId || selectedDocenteId === "__ninguno__";
+    
+    // ADMINISTRADORES: Siempre mostrar todas las áreas del sistema
+    if (isPrivileged && hasNoDocenteSelected) {
+      return todasLasAreasDelSistema;
+    }
+    
+    // ADMINISTRADOR CON DOCENTE SELECCIONADO: Mostrar áreas del docente
+    if (isPrivileged && !hasNoDocenteSelected) {
+      return filterAreasByGrado(areasPorGrado, grado, assignedAreaIds);
+    }
+    
+    // DOCENTES: Mostrar solo sus áreas asignadas
+    return filterAreasByGrado(areasPorGrado, grado, assignedAreaIds);
+  }, [areasPorGrado, grado, assignedAreaIds, isPrivileged, selectedDocenteId, todasLasAreasDelSistema]);
   const [areaId, setAreaId] = useState<string>("");
-  const [institution, setInstitution] = useState<string>("");
   const [anio, setAnio] = useState<string>(new Date().getFullYear().toString());
   const [downloadState, setDownloadState] = useState<Record<DownloadAction, DownloadState>>({
     nominaExcel: "idle",
@@ -705,14 +799,18 @@ export default function RegistrosPage() {
 
   const canDownloadNomina = useMemo(() => {
     if (!grado || !seccion) return false;
+    // Administradores pueden descargar sin restricciones
+    if (isPrivileged) return true;
     return Boolean(gradoSeccionCatalog[`${grado}|${seccion}`]);
-  }, [grado, seccion, gradoSeccionCatalog]);
+  }, [grado, seccion, gradoSeccionCatalog, isPrivileged]);
 
   const canDownloadRegistro = useMemo(() => {
     if (isAuxiliar) return false;
     if (!grado || !seccion || !areaId) return false;
+    // Administradores pueden descargar sin restricciones
+    if (isPrivileged) return true;
     return Boolean(gradoSeccionCatalog[`${grado}|${seccion}`]);
-  }, [isAuxiliar, grado, seccion, areaId, gradoSeccionCatalog]);
+  }, [isAuxiliar, grado, seccion, areaId, gradoSeccionCatalog, isPrivileged]);
 
   const handleDownloadExcel = async (kind: DownloadKind) => {
     if (!user) {
@@ -742,7 +840,6 @@ export default function RegistrosPage() {
           body: {
             ...payload,
             areaId: isAuxiliar ? null : payload.areaId,
-            institution: institution || undefined,
             anio,
             user: userPayload,
           },
@@ -754,7 +851,6 @@ export default function RegistrosPage() {
           body: {
             ...payload,
             areaId,
-            institution: institution || undefined,
             anio,
             user: userPayload,
           },
@@ -805,12 +901,22 @@ export default function RegistrosPage() {
         const data = await fetchPdfData<NominaJsonResponse>("/api/registros/nomina", {
           ...payload,
           areaId: isAuxiliar ? null : payload.areaId,
-          institution: institution || undefined,
           anio,
           user: userPayload,
         });
 
-        await generateNominaPdf(data, 35, `nomina-${grado}-${seccion}.pdf`);
+        await generateNominaPdf(
+          data,
+          35,
+          `nomina-${grado}-${seccion}.pdf`,
+          isPrivileged,
+          {
+            appName,
+            institutionName,
+            themeColor,
+            docenteNombreFallback: `${user?.apellidoPaterno ?? ""} ${user?.apellidoMaterno ?? ""} ${user?.nombres ?? ""}`.replace(/\s+/g, " ").trim() || undefined,
+          },
+        );
       } else {
         if (!areaId) {
           throw new Error("Selecciona un área para generar el PDF");
@@ -819,7 +925,6 @@ export default function RegistrosPage() {
         const data = await fetchPdfData<RegistroAuxiliarJsonResponse>("/api/registros/registro-auxiliar", {
           ...payload,
           areaId,
-          institution: institution || undefined,
           anio,
           user: userPayload,
         });
@@ -834,6 +939,7 @@ export default function RegistrosPage() {
             themeColor,
             docenteNombreFallback: `${user?.apellidoPaterno ?? ""} ${user?.apellidoMaterno ?? ""} ${user?.nombres ?? ""}`.replace(/\s+/g, " ").trim() || undefined,
           },
+          isPrivileged,
         );
       }
 
@@ -859,9 +965,20 @@ export default function RegistrosPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Registros</h1>
-        <p className="text-sm text-muted-foreground">
-          Descarga plantillas en blanco con la nómina de estudiantes y los registros auxiliares según tu perfil.
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">Registros</h1>
+          {isPrivileged && (
+            <Badge variant="default" className="bg-blue-500">
+              <ShieldAlert className="mr-1 h-3 w-3" />
+              Acceso completo
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isPrivileged 
+            ? "Como administrador, puedes descargar registros de cualquier grado, sección y área sin restricciones."
+            : "Descarga plantillas en blanco con la nómina de estudiantes y los registros auxiliares según tu perfil."
+          }
         </p>
       </div>
 
@@ -920,10 +1037,6 @@ export default function RegistrosPage() {
                   <Label htmlFor="anio">Año</Label>
                   <Input id="anio" value={anio} onChange={(event) => setAnio(event.target.value)} placeholder="2025" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="institution">Institución (opcional)</Label>
-                  <Input id="institution" value={institution} onChange={(event) => setInstitution(event.target.value)} placeholder="Nombre de la institución" />
-                </div>
               </CardContent>
               <CardFooter className="flex flex-wrap items-center gap-3">
                 <Button
@@ -970,7 +1083,29 @@ export default function RegistrosPage() {
                     Descarga la plantilla con columnas por competencias y niveles de logro. Disponible para docentes y personal administrativo.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
+                <CardContent className="space-y-6">
+                  {isPrivileged && (
+                    <div className="space-y-2 pb-4 border-b">
+                      <Label htmlFor="docente">Docente (opcional)</Label>
+                      <Select value={selectedDocenteId} onValueChange={setSelectedDocenteId}>
+                        <SelectTrigger id="docente">
+                          <SelectValue placeholder="Selecciona un docente para ver sus áreas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__ninguno__">Ninguno (ver todas las áreas)</SelectItem>
+                          {docenteOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Selecciona un docente para filtrar las áreas según sus asignaciones
+                      </p>
+                    </div>
+                  )}
+                  <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="grado-registro">Grado</Label>
                     <Select value={grado} onValueChange={setGrado}>
@@ -1005,29 +1140,40 @@ export default function RegistrosPage() {
                     <Label htmlFor="area">Área</Label>
                     <Select value={areaId} onValueChange={setAreaId} disabled={!grado || areaOptions.length === 0}>
                       <SelectTrigger id="area">
-                        <SelectValue placeholder={areaOptions.length ? "Selecciona un área" : "No hay áreas disponibles"} />
+                        <SelectValue placeholder={areaOptions.length ? "Selecciona un área" : "No hay áreas configuradas para este grado"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {areaOptions.map((option, index) => (
-                          <SelectItem key={`${option.value}-${index}`} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
+                        {areaOptions.length > 0 ? (
+                          areaOptions.map((option, index) => (
+                            <SelectItem key={`${option.value}-${index}`} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No hay áreas curriculares configuradas para {grado}
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
+                    {areaOptions.length === 0 && grado && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        {isPrivileged 
+                          ? "No hay áreas curriculares en el sistema. Configúralas en Gestión Curricular."
+                          : "No tienes áreas asignadas para este grado. Contacta al administrador."
+                        }
+                      </p>
+                    )}
+                    {isPrivileged && areaOptions.length > 0 && (selectedDocenteId === "__ninguno__") && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        Mostrando todas las áreas del sistema (sin filtro por grado)
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="anio-registro">Año</Label>
                     <Input id="anio-registro" value={anio} onChange={(event) => setAnio(event.target.value)} placeholder="2025" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="institution-registro">Institución (opcional)</Label>
-                    <Input
-                      id="institution-registro"
-                      value={institution}
-                      onChange={(event) => setInstitution(event.target.value)}
-                      placeholder="Nombre de la institución"
-                    />
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-wrap items-center gap-3">
