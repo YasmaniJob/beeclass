@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { updatePermiso, deletePermiso, PermisoPayload } from '@/server/googleSheets/permisos';
 
 type RouteContext = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { id } = context.params;
+  const { id } = await context.params;
 
   if (!id) {
     return NextResponse.json({ message: 'Id de permiso no proporcionado' }, { status: 400 });
@@ -29,14 +29,14 @@ export async function PUT(request: Request, context: RouteContext) {
 
     return NextResponse.json(updated, { status: 200 });
   } catch (error) {
-    console.error(`PUT /api/permisos/${id}`, error);
+    console.error('PUT /api/permisos/:id', error);
     const message = error instanceof Error ? error.message : 'Error al actualizar el permiso';
     return NextResponse.json({ message }, { status: 500 });
   }
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const { id } = context.params;
+  const { id } = await context.params;
 
   if (!id) {
     return NextResponse.json({ message: 'Id de permiso no proporcionado' }, { status: 400 });
@@ -50,7 +50,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error(`DELETE /api/permisos/${id}`, error);
+    console.error('DELETE /api/permisos/:id', error);
     const message = error instanceof Error ? error.message : 'Error al eliminar el permiso';
     return NextResponse.json({ message }, { status: 500 });
   }
