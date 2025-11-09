@@ -772,7 +772,7 @@ export default function CargaAcademicaPage() {
     });
   }, [groupedAreas, areaDetailFilter, areaDetailGradeFilter, areaDetailSectionFilter]);
 
-  type TutorDetalle = { docente: Docente; asignaciones: Asignacion[] };
+  type TutorDetalle = { docente: Docente; asignaciones: AsignacionRol[] };
   type TutorAgrupado = { grado: string; seccion: string; docentes: TutorDetalle[] };
 
   const groupedTutores = useMemo<TutorAgrupado[]>(() => {
