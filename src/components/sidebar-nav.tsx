@@ -131,7 +131,7 @@ export function SidebarNav() {
   const pathname = usePathname();
   const { state, setOpen, open, isMounted } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const { appName, institutionName, nivelInstitucion, isLoaded: isConfigLoaded } = useAppConfig();
+  const { appName, institutionName, nivelInstitucion, logoUrl, isLoaded: isConfigLoaded } = useAppConfig();
   const { user, logout, isLoaded: isUserLoaded } = useCurrentUser();
 
   const rol = user?.rol ?? "";
@@ -248,7 +248,15 @@ export function SidebarNav() {
           !isCollapsed && "items-start" // Alinear arriba cuando está expandido
         )}>
           <div className={brandIconClasses}>
-            <SquareCheckBig className={cn("h-7 w-7", isCollapsed && "h-5 w-5 text-sidebar-foreground")} />
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt={appName} 
+                className={cn("object-contain", isCollapsed ? "h-5 w-5" : "h-7 w-7")}
+              />
+            ) : (
+              <SquareCheckBig className={cn("h-7 w-7", isCollapsed && "h-5 w-5 text-sidebar-foreground")} />
+            )}
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1 space-y-0.5">

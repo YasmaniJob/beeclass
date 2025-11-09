@@ -3,7 +3,6 @@
 import { FormEvent, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAppConfig } from '@/hooks/use-app-config';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { Button } from '@/components/ui/button';
@@ -153,7 +152,7 @@ export default function RegistroPage() {
                             <div className="flex items-center gap-4">
                                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/25 bg-white/10">
                                     {logoUrl ? (
-                                        <Image src={logoUrl} alt="Logo institucional" width={48} height={48} className="h-10 w-10 object-contain" />
+                                        <img src={logoUrl} alt="Logo institucional" className="h-10 w-10 object-contain" />
                                     ) : (
                                         <UserPlus className="h-6 w-6" />
                                     )}
@@ -176,7 +175,7 @@ export default function RegistroPage() {
                                         <div key={slide.title ?? index} className="w-full shrink-0">
                                             {slide.type === 'image' && slide.image ? (
                                                 <div className="relative aspect-[3/4] w-full">
-                                                    <Image src={slide.image} alt={slide.title} fill className="object-cover" />
+                                                    <img src={slide.image} alt={slide.title} className="absolute inset-0 h-full w-full object-cover" />
                                                     <div className="absolute inset-0 rounded-[32px] bg-slate-900/25" />
                                                 </div>
                                             ) : (

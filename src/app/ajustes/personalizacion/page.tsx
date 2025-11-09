@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAppConfig } from '@/hooks/use-app-config';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { useMatriculaData } from '@/hooks/use-matricula-data';
 import { Nivel } from '@/lib/definitions';
 
@@ -55,12 +56,7 @@ export default function PersonalizacionPage() {
   }, [appName, institutionName, themeColor, logoUrl, loginImageUrl, nivelInstitucion]);
 
   const handleSaveAppConfig = () => {
-    setAppName(localAppName);
-    setInstitutionName(localInstitutionName);
-    setThemeColor(localThemeColor);
-    setLogoUrl(localLogoUrl);
-    setLoginImageUrl(localLoginImageUrl);
-    setNivelInstitucion(localNivelInstitucion);
+    // Guardar todo en localStorage y actualizar el contexto
     saveConfig({ 
         appName: localAppName, 
         institutionName: localInstitutionName, 
@@ -69,11 +65,14 @@ export default function PersonalizacionPage() {
         loginImageUrl: localLoginImageUrl,
         nivelInstitucion: localNivelInstitucion,
     });
+    
     toast({
       title: 'Personalización guardada',
-      description: 'La identidad de la aplicación ha sido actualizada.',
+      description: 'Recarga la página para ver todos los cambios aplicados.',
     });
   };
+
+
 
   return (
     <div className="space-y-8">
@@ -88,7 +87,13 @@ export default function PersonalizacionPage() {
             </div>
         </div>
         <Card>
-            <CardContent className="space-y-8 pt-6">
+            <CardHeader>
+                <CardTitle>Configuración General</CardTitle>
+                <CardDescription>
+                    Personaliza la identidad visual de tu institución
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
                  <div className="space-y-2">
                     <Label htmlFor="nivel-institucion">Nivel Educativo Principal</Label>
                     <Select value={localNivelInstitucion} onValueChange={(v) => setLocalNivelInstitucion(v as Nivel)}>
@@ -105,7 +110,12 @@ export default function PersonalizacionPage() {
                         Este nivel determina las áreas curriculares disponibles. Cambiar el nivel puede afectar la configuración existente.
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <Separator />
+                
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">Información Básica</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="app-name">Nombre de la App</Label>
                         <Input
@@ -122,31 +132,78 @@ export default function PersonalizacionPage() {
                             onChange={(e) => setLocalInstitutionName(e.target.value)}
                         />
                     </div>
+                    </div>
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="logo-url">URL del Logo</Label>
+                
+                <Separator />
+                
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">Identidad Visual</h3>
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="logo-url">URL del Logo</Label>
                     <Input
                         id="logo-url"
                         value={localLogoUrl}
                         onChange={(e) => setLocalLogoUrl(e.target.value)}
                         placeholder="https://example.com/logo.png"
+                        type="url"
                     />
-                    <p className="text-xs text-muted-foreground">Pega la URL de un logo alojado en un servicio externo (formatos recomendados: .png, .svg).</p>
+                    <p className="text-xs text-muted-foreground">
+                        Pega la URL de un logo alojado en un servicio externo. Formatos: .png, .svg, .jpg
+                    </p>
+                    {localLogoUrl && (
+                        <div className="mt-3 p-4 border rounded-lg bg-muted/30">
+                            <p className="text-xs font-medium mb-2">Vista previa:</p>
+                            <img 
+                                src={localLogoUrl} 
+                                alt="Logo preview" 
+                                className="h-16 w-auto object-contain"
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                            />
+                            <p className="text-xs text-destructive mt-2 hidden">
+                                ⚠️ No se pudo cargar la imagen. Verifica la URL.
+                            </p>
+                        </div>
+                    )}
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="login-image-url">URL de Imagen de Fondo</Label>
+                    <Label htmlFor="login-image-url">URL de Imagen de Login</Label>
                     <Input
                         id="login-image-url"
                         value={localLoginImageUrl}
                         onChange={(e) => setLocalLoginImageUrl(e.target.value)}
                         placeholder="https://example.com/background.jpg"
+                        type="url"
                     />
-                     <p className="text-xs text-muted-foreground">URL de una imagen para usar como fondo en ciertas secciones (formatos recomendados: .jpg, .png).</p>
+                     <p className="text-xs text-muted-foreground">
+                        Imagen de fondo para la página de login. Formatos: .jpg, .png, .webp
+                    </p>
+                    {localLoginImageUrl && (
+                        <div className="mt-3 p-4 border rounded-lg bg-muted/30">
+                            <p className="text-xs font-medium mb-2">Vista previa:</p>
+                            <img 
+                                src={localLoginImageUrl} 
+                                alt="Login image preview" 
+                                className="h-32 w-auto object-cover rounded"
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                            />
+                            <p className="text-xs text-destructive mt-2 hidden">
+                                ⚠️ No se pudo cargar la imagen. Verifica la URL.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-3">
                     <Label>Color Principal (Acento)</Label>
-                    <p className="text-xs text-muted-foreground">Este color se usará en botones, enlaces y otros elementos interactivos.</p>
+                    <p className="text-xs text-muted-foreground">Este color se usará en botones, enlaces y otros elementos interactivos. Haz clic en "Guardar Cambios" para aplicar.</p>
                     <div className="flex items-center gap-4">
                         <Input
                             id="theme-color-picker"
@@ -160,7 +217,14 @@ export default function PersonalizacionPage() {
                             value={localThemeColor.toUpperCase()}
                             onChange={(e) => setLocalThemeColor(e.target.value)}
                             className="flex-1 font-mono text-center tracking-widest text-lg"
+                            maxLength={7}
+                            placeholder="#000000"
                         />
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                        <Button size="sm" className="w-full">Vista previa del botón</Button>
+                    </div>
+                </div>
                     </div>
                 </div>
             </CardContent>
