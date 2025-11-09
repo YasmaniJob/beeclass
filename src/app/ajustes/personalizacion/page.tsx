@@ -101,7 +101,9 @@ export default function PersonalizacionPage() {
                             ))}
                         </SelectContent>
                     </Select>
-                     <p className="text-xs text-muted-foreground">Este nivel se usará para filtrar los grados y secciones en toda la aplicación.</p>
+                     <p className="text-xs text-muted-foreground">
+                        Este nivel determina las áreas curriculares disponibles. Cambiar el nivel puede afectar la configuración existente.
+                    </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">

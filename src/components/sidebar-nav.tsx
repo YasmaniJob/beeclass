@@ -220,19 +220,19 @@ export function SidebarNav() {
   const brandLinkClasses = cn(
     "flex min-w-0 items-center gap-3 rounded-xl border border-sidebar-border/40 px-3 py-2 text-left transition-colors",
     "hover:border-sidebar-accent hover:bg-sidebar-accent/15",
-    isCollapsed ? "h-10 w-10 flex-none justify-center border-transparent p-0" : "flex-1"
+    isCollapsed ? "h-12 w-12 flex-none justify-center border-transparent p-0" : "flex-1"
   );
 
   const brandIconClasses = cn(
     "flex items-center justify-center rounded-lg",
-    isCollapsed ? "size-8 text-sidebar-foreground" : "size-10 bg-primary/15 text-primary"
+    isCollapsed ? "size-8 text-sidebar-foreground" : "size-12 bg-primary/15 text-primary"
   );
 
   const menuButtonClasses = cn(
     "w-full justify-start gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
     "hover:bg-sidebar-accent/15 hover:text-sidebar-foreground",
     "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
-    isCollapsed && "h-11 w-11 justify-center gap-0 rounded-lg bg-transparent p-0 text-sidebar-foreground hover:bg-sidebar-accent/30"
+    isCollapsed && "h-12 w-12 flex-shrink-0 justify-center gap-0 rounded-lg bg-transparent p-0 text-sidebar-foreground hover:bg-sidebar-accent/30"
   );
 
   const childLinkClasses = cn(
@@ -243,31 +243,32 @@ export function SidebarNav() {
   return (
     <div className="flex h-full flex-col border border-sidebar-border/60 bg-sidebar text-sidebar-foreground shadow-lg transition-all duration-200">
       <SidebarHeader className="border-none px-5 pb-3 pt-7 group-data-[collapsible=icon]:px-3 group-data-[collapsible=icon]:pb-3 group-data-[collapsible=icon]:pt-4">
-        <Link href="/" className={brandLinkClasses}>
+        <Link href="/" className={cn(
+          brandLinkClasses,
+          !isCollapsed && "items-start" // Alinear arriba cuando está expandido
+        )}>
           <div className={brandIconClasses}>
-            <SquareCheckBig className={cn("h-6 w-6", isCollapsed && "h-5 w-5 text-sidebar-foreground")} />
+            <SquareCheckBig className={cn("h-7 w-7", isCollapsed && "h-5 w-5 text-sidebar-foreground")} />
           </div>
           {!isCollapsed && (
-            <>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold leading-tight">{appName}</p>
-                <span className="truncate text-xs text-muted-foreground leading-tight">{institutionLabel}</span>
-              </div>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="truncate text-sm font-semibold leading-tight">{appName}</p>
+              <p className="truncate text-xs text-muted-foreground leading-tight">{institutionLabel}</p>
               {showNivelBadge && (
-                <Badge variant="outline" className="ml-auto hidden text-[10px] font-medium uppercase tracking-wide md:inline-flex">
+                <Badge variant="outline" className="w-fit text-[10px] font-medium uppercase tracking-wide">
                   {nivelInstitucion}
                 </Badge>
               )}
-            </>
+            </div>
           )}
         </Link>
       </SidebarHeader>
 
-      <ScrollArea className="flex-1 px-4 pb-8 pt-1.5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pb-5 group-data-[collapsible=icon]:pt-2">
+      <ScrollArea className="flex-1 px-4 pb-8 pt-1.5 group-data-[collapsible=icon]:px-3 group-data-[collapsible=icon]:pb-5 group-data-[collapsible=icon]:pt-2">
         {showSkeleton ? (
           <SidebarNavSkeleton />
         ) : (
-          <SidebarMenu className="flex flex-col gap-2 px-0 group-data-[collapsible=icon]:gap-1.5">
+          <SidebarMenu className="flex flex-col gap-2 px-0 group-data-[collapsible=icon]:gap-2 group-data-[collapsible=icon]:items-center">
             {prioritizedItems.map((item) => {
               const hasChildren = Boolean(item.children?.length);
 

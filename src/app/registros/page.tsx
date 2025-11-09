@@ -283,7 +283,7 @@ async function generateNominaPdf(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text((branding?.appName || "ASISTENCIAFÁCIL").toUpperCase(), 16, headerTop + 8);
+  doc.text((branding?.appName || "BEECLASS").toUpperCase(), 16, headerTop + 8);
 
   doc.setFontSize(16);
   doc.text("NÓMINA DE ASISTENCIA", pageWidth / 2, headerTop + 9, { align: "center" });
@@ -432,7 +432,7 @@ async function generateRegistroAuxiliarPdf(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text((branding?.appName || "ASISTENCIAFÁCIL").toUpperCase(), 16, headerTop + 8);
+  doc.text((branding?.appName || "BEECLASS").toUpperCase(), 16, headerTop + 8);
 
   doc.setFontSize(16);
   doc.text("REGISTRO AUXILIAR", pageWidth / 2, headerTop + 9, { align: "center" });

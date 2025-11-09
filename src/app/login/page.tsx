@@ -217,7 +217,7 @@ function LoginContent() {
                                     <Badge variant="outline" className="border-white/30 bg-white/10 px-3 text-xs font-medium uppercase tracking-wide text-white/90">
                                         {institutionName || 'Institución educativa'}
                                     </Badge>
-                                    <h2 className="text-2xl font-semibold leading-tight md:text-3xl">Asistencia Fácil</h2>
+                                    <h2 className="text-2xl font-semibold leading-tight md:text-3xl">{appName}</h2>
                                 </div>
                             </div>
                         </div>

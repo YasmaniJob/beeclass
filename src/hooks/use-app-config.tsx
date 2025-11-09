@@ -12,7 +12,7 @@ const LOGO_URL_KEY = 'app_config_logo_url';
 const LOGIN_IMAGE_URL_KEY = 'app_config_login_image_url';
 const NIVEL_INSTITUCION_KEY = 'app_config_nivel_institucion';
 
-const DEFAULT_APP_NAME = 'AsistenciaFácil';
+const DEFAULT_APP_NAME = 'Beeclass';
 const DEFAULT_INSTITUTION_NAME = '';
 const DEFAULT_LOGO_URL = '';
 const DEFAULT_LOGIN_IMAGE_URL = '';
