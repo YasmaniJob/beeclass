@@ -133,20 +133,20 @@ export function AsistenciaAulaTable({ estudiantes, asistencia, permisos, inciden
                                                 {record.entryTime ? record.entryTime.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '-'}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenHistorialSheet(estudiante);}}>
+                                                <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenHistorialSheet(estudiante);}}>
                                                     <History className="h-4 w-4 text-blue-500" />
                                                     <span className="sr-only">Historial</span>
                                                 </Button>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {estudianteIncidentes.length > 0 ? (
-                                                    <Button variant="ghost" size="icon" className="relative" onClick={(e) => {e.stopPropagation(); handleOpenIncidenteHistorySheet(estudiante)}}>
+                                                    <Button type="button" variant="ghost" size="icon" className="relative" onClick={(e) => {e.stopPropagation(); handleOpenIncidenteHistorySheet(estudiante)}}>
                                                         <AlertTriangle className="h-4 w-4 text-orange-500" />
                                                         <Badge variant="destructive" className="absolute -top-1 -right-2 h-4 w-4 justify-center p-0 text-xs">{estudianteIncidentes.length}</Badge>
                                                         <span className="sr-only">Ver Incidentes</span>
                                                     </Button>
                                                 ) : (
-                                                    <Button variant="ghost" size="icon" onClick={(e) => {e.stopPropagation(); handleOpenIncidenteFormSheet(estudiante)}}>
+                                                    <Button type="button" variant="ghost" size="icon" onClick={(e) => {e.stopPropagation(); handleOpenIncidenteFormSheet(estudiante)}}>
                                                         <MessageSquarePlus className="h-4 w-4 text-muted-foreground" />
                                                         <span className="sr-only">Registrar Incidente</span>
                                                     </Button>
@@ -154,7 +154,7 @@ export function AsistenciaAulaTable({ estudiantes, asistencia, permisos, inciden
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {isPermission ? (
-                                                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenPermisoSheet(estudiante); }}>
+                                                    <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenPermisoSheet(estudiante); }}>
                                                         <FileLock className="h-4 w-4 text-purple-500" />
                                                         <span className="sr-only">Permisos</span>
                                                     </Button>
