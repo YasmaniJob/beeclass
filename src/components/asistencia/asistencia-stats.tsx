@@ -3,7 +3,7 @@
 
 import { cn } from "@/lib/utils";
 import { Users, Check, Clock, X, FileLock, Siren } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, memo, useCallback } from "react";
 import { AsistenciaState, FilterStatus, AsistenciaRecord } from "@/hooks/use-asistencia";
 
 interface StatCardProps {
@@ -52,18 +52,21 @@ interface AsistenciaStatsProps {
     isPersonal?: boolean;
 }
 
-export function AsistenciaStats({ asistencia, totalSubjects, incidentesCount, statusFilter, onFilterChange, isPersonal = false }: AsistenciaStatsProps) {
-    const stats = useMemo(() => ({
-        total: totalSubjects,
-        presentes: Object.values(asistencia).filter(r => r.status === 'presente').length,
-        tardes: Object.values(asistencia).filter(r => r.status === 'tarde').length,
-        faltas: Object.values(asistencia).filter(r => r.status === 'falta').length,
-        permisos: Object.values(asistencia).filter(r => r.status === 'permiso').length,
-      }), [asistencia, totalSubjects]);
+const AsistenciaStatsComponent = ({ asistencia, totalSubjects, incidentesCount, statusFilter, onFilterChange, isPersonal = false }: AsistenciaStatsProps) => {
+    const stats = useMemo(() => {
+        const values = Object.values(asistencia);
+        return {
+            total: totalSubjects,
+            presentes: values.filter(r => r.status === 'presente').length,
+            tardes: values.filter(r => r.status === 'tarde').length,
+            faltas: values.filter(r => r.status === 'falta').length,
+            permisos: values.filter(r => r.status === 'permiso').length,
+        };
+    }, [asistencia, totalSubjects]);
 
-      const handleFilterChange = (status: FilterStatus) => {
+    const handleFilterChange = useCallback((status: FilterStatus) => {
         onFilterChange(status);
-      }
+    }, [onFilterChange]);
 
     return (
         <div className={cn("grid gap-2 grid-cols-2 sm:grid-cols-3", isPersonal ? "lg:grid-cols-5" : "lg:grid-cols-6")}>
@@ -77,4 +80,6 @@ export function AsistenciaStats({ asistencia, totalSubjects, incidentesCount, st
             )}
         </div>
     );
-}
+};
+
+export const AsistenciaStats = memo(AsistenciaStatsComponent);

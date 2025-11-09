@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { Permiso, Incidente, AsistenciaStatus } from '@/lib/definitions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +28,7 @@ interface AsistenciaAulaTableProps {
     onStatusChange: (numeroDocumento: string, status: AsistenciaStatus) => void;
 }
 
-export function AsistenciaAulaTable({ estudiantes, asistencia, permisos, incidentes, onStatusChange }: AsistenciaAulaTableProps) {
+const AsistenciaAulaTableComponent = ({ estudiantes, asistencia, permisos, incidentes, onStatusChange }: AsistenciaAulaTableProps) => {
     const [isPermisoSheetOpen, setIsPermisoSheetOpen] = useState(false);
     const [isIncidenteHistorySheetOpen, setIsIncidenteHistorySheetOpen] = useState(false);
     const [isIncidenteFormSheetOpen, setIsIncidenteFormSheetOpen] = useState(false);
@@ -227,4 +227,6 @@ export function AsistenciaAulaTable({ estudiantes, asistencia, permisos, inciden
             )}
         </>
     );
-}
+};
+
+export const AsistenciaAulaTable = memo(AsistenciaAulaTableComponent);

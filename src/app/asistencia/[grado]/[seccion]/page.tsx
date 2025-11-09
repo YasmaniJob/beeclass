@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
@@ -58,7 +58,7 @@ export default function AsistenciaPage() {
     setIsClient(true);
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const success = await saveToGoogleSheets();
     if (success) {
       toast({
@@ -66,7 +66,7 @@ export default function AsistenciaPage() {
         description: 'El registro de asistencia ha sido guardado en Google Sheets.',
       });
     }
-  };
+  }, [saveToGoogleSheets, toast]);
 
   const estudiantesFiltrados = useMemo(() => {
     if (isLoading || !isClient) return [];
@@ -94,15 +94,20 @@ export default function AsistenciaPage() {
     }, 0);
   }, [asistencia, initialAsistencia, isLoading, isClient]);
   
+  const estudiantesSet = useMemo(() => 
+    new Set(estudiantes.map(e => e.numeroDocumento)), 
+    [estudiantes]
+  );
+
   const incidentesDelDia = useMemo(() => {
     if (!currentDate) return [];
-    const hoy = startOfDay(currentDate);
-    return incidentes.filter(incidente => 
-      incidente.sujeto instanceof Estudiante &&
-      startOfDay(new Date(incidente.fecha)).getTime() === hoy.getTime() && 
-      estudiantes.some(e => e.numeroDocumento === incidente.sujeto.numeroDocumento)
-    );
-  }, [incidentes, currentDate, estudiantes]);
+    const hoy = startOfDay(currentDate).getTime();
+    return incidentes.filter(incidente => {
+      if (!(incidente.sujeto instanceof Estudiante)) return false;
+      if (!estudiantesSet.has(incidente.sujeto.numeroDocumento)) return false;
+      return startOfDay(new Date(incidente.fecha)).getTime() === hoy;
+    });
+  }, [incidentes, currentDate, estudiantesSet]);
 
   return (
     <div className="space-y-8">

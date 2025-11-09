@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { Permiso, Incidente } from '@/lib/definitions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +28,7 @@ interface AsistenciaTableProps {
     isReadOnly?: boolean;
 }
 
-export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes, onStatusChange, isReadOnly = false }: AsistenciaTableProps) {
+const AsistenciaTableComponent = ({ estudiantes, asistencia, permisos, incidentes, onStatusChange, isReadOnly = false }: AsistenciaTableProps) => {
     const [isPermisoSheetOpen, setIsPermisoSheetOpen] = useState(false);
     const [isIncidenteHistorySheetOpen, setIsIncidenteHistorySheetOpen] = useState(false);
     const [isIncidenteFormSheetOpen, setIsIncidenteFormSheetOpen] = useState(false);
@@ -228,4 +228,6 @@ export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes,
             </p>
         </>
     );
-}
+};
+
+export const AsistenciaTable = memo(AsistenciaTableComponent);
