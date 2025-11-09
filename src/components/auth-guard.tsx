@@ -17,6 +17,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   const isPublicPage = pathname === '/login' || pathname === '/registro';
 
@@ -25,10 +26,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (isUserLoaded && !user && !isPublicPage && !authError) {
+    if (isUserLoaded && !user && !isPublicPage && !authError && !hasRedirected) {
+      setHasRedirected(true);
       router.push('/login');
     }
-  }, [user, isUserLoaded, router, pathname, isPublicPage, authError, isSigningOut]);
+  }, [user, isUserLoaded, router, pathname, isPublicPage, authError, isSigningOut, hasRedirected]);
 
   const handleRefreshSession = useCallback(async () => {
     setAuthError(null);
@@ -61,14 +63,28 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  // Si no hay usuario y ya se redirigió, mostrar loading en lugar del error
+  if (!user && hasRedirected) {
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-between">
+          <Skeleton className="h-6 w-1/3" />
+          <Skeleton className="h-6 w-1/4" />
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  // Solo mostrar el mensaje de error si hay un error explícito (no en la primera carga)
+  if (!user && authError) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6">
         <Alert className="max-w-md border-destructive/40 bg-destructive/5">
           <AlertCircle className="h-5 w-5 text-destructive" />
           <AlertTitle>Sesión no disponible</AlertTitle>
           <AlertDescription>
-            {authError ?? 'Tu sesión expiró o no pudimos validar tus credenciales.'}
+            {authError}
           </AlertDescription>
         </Alert>
         <div className="flex gap-3">
