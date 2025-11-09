@@ -262,6 +262,21 @@ Vercel desplegará automáticamente. Recibirás un email cuando termine.
 2. Confirma que la cuenta de servicio tenga permisos en la hoja
 3. Verifica que el `GOOGLE_SHEETS_SPREADSHEET_ID` sea correcto
 
+### Errores de Iconos o Service Worker
+
+Si ves errores como:
+- "Failed to load resource: 404" para iconos
+- "ReferenceError: _ref is not defined" en sw.js
+
+**Estos son errores cosméticos que NO afectan la funcionalidad.**
+
+Solución: Ver archivo `CORRECCION-ICONOS-PWA.md` para corregirlos (opcional).
+
+Puedes ignorarlos por ahora y enfocarte en verificar que:
+- ✅ La autenticación funcione
+- ✅ Los datos se carguen
+- ✅ Google Sheets funcione
+
 ---
 
 ## 📞 Recursos

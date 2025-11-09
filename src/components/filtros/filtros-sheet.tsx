@@ -119,12 +119,12 @@ export function FiltrosSheet({
                     </div>
                 </ScrollArea>
                 <SheetFooter className="flex-row sm:justify-between">
-                     <Button variant="ghost" onClick={handleClearAndApply}>Limpiar filtros</Button>
+                     <Button type="button" variant="ghost" onClick={handleClearAndApply}>Limpiar filtros</Button>
                      <div className="flex gap-2">
                         <SheetClose asChild>
-                            <Button variant="secondary">Cancelar</Button>
+                            <Button type="button" variant="secondary">Cancelar</Button>
                         </SheetClose>
-                        <Button onClick={handleApplyFilters}>Aplicar</Button>
+                        <Button type="button" onClick={handleApplyFilters}>Aplicar</Button>
                     </div>
                 </SheetFooter>
             </SheetContent>

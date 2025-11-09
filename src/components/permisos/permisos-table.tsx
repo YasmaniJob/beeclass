@@ -91,7 +91,7 @@ export function PermisosTable({ permisos, onDelete, canManage }: PermisosTablePr
                                 {format(p.fechaInicio, 'P', {locale: es})} - {format(p.fechaFin, 'P', {locale: es})}
                             </TableCell>
                             <TableCell className="text-right space-x-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewDetails(p)}>
+                                <Button type="button" variant="outline" size="sm" onClick={() => handleViewDetails(p)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     Detalles
                                 </Button>

@@ -133,7 +133,7 @@ export function AsistenciaPersonalTable({ personal, asistencia, onStatusChange, 
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenIncidenteSheet(p)}>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenIncidenteSheet(p)}>
                                                     <MessageSquarePlus className="h-4 w-4 text-muted-foreground" />
                                                     <span className="sr-only">Registrar Incidente</span>
                                                 </Button>

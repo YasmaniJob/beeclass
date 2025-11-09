@@ -138,10 +138,11 @@ export function HoraFormSheet({ open, onOpenChange, onSave, horaToEdit, nextOrde
                 </div>
 
                 <SheetFooter className="flex-col sm:flex-row gap-2">
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving} className="w-full sm:w-auto">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving} className="w-full sm:w-auto">
                         Cancelar
                     </Button>
                     <Button 
+                        type="button"
                         onClick={handleSave} 
                         disabled={!nombre.trim() || !horaInicio || !horaFin || saving} 
                         className="w-full sm:w-auto"

@@ -87,11 +87,8 @@ export const metadata: Metadata = {
   category: 'education',
   manifest: '/manifest.json',
   icons: {
-    apple: "/icon-192x192.png",
-    icon: [
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-    ],
+    icon: '/favicon.ico',
+    apple: '/icon-192x192.png',
   },
 };
 

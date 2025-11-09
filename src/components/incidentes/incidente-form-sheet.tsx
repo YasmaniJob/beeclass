@@ -71,7 +71,7 @@ export function IncidenteFormSheet({
           >
             Cancelar
           </Button>
-          <Button onClick={actions.handleSave} disabled={isSaveDisabled}>
+          <Button type="button" onClick={actions.handleSave} disabled={isSaveDisabled}>
             Guardar Incidente
             {selectedIncidentes.length > 0 && (
               <Badge variant="secondary" className="ml-2">

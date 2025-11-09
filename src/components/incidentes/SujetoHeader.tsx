@@ -49,7 +49,7 @@ export function SujetoHeader({
           </div>
         </div>
         {!isEditMode && (
-          <Button variant="ghost" size="sm" onClick={onReset}>
+          <Button type="button" variant="ghost" size="sm" onClick={onReset}>
             <X className="mr-2 h-4 w-4" />
             Cambiar
           </Button>

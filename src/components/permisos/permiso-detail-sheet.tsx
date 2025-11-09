@@ -90,7 +90,7 @@ export function PermisoDetailSheet({ permiso, isOpen, onOpenChange }: PermisoDet
                 </div>
 
                 <SheetFooter>
-                    <Button variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
+                    <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
                 </SheetFooter>
             </SheetContent>
         </Sheet>

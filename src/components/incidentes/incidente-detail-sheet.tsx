@@ -79,7 +79,7 @@ export function IncidenteDetailSheet({ incidente, isOpen, onOpenChange }: Incide
                 </div>
 
                 <SheetFooter>
-                    <Button variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
+                    <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
                 </SheetFooter>
             </SheetContent>
         </Sheet>

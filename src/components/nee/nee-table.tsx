@@ -78,7 +78,7 @@ export function NeeTable({ entries, onViewDetails }: NeeTableProps) {
                                 )}
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="outline" size="sm" onClick={() => onViewDetails(entry)}>
+                                <Button type="button" variant="outline" size="sm" onClick={() => onViewDetails(entry)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     Ver detalles
                                 </Button>

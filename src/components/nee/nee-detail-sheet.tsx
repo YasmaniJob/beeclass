@@ -87,12 +87,12 @@ export function NeeDetailSheet({ entry, isOpen, onOpenChange, onEdit, canManage 
 
                 <SheetFooter>
                     {canManage && onEdit && (
-                        <Button variant="outline" onClick={() => onEdit(entry)}>
+                        <Button type="button" variant="outline" onClick={() => onEdit(entry)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Editar registro
                         </Button>
                     )}
-                    <Button variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
+                    <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
                 </SheetFooter>
             </SheetContent>
         </Sheet>

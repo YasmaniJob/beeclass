@@ -69,7 +69,7 @@ export function AsistenciaSeccionesTable({ secciones, baseUrl }: AsistenciaSecci
                                 {tutor ? `${tutor.nombres.split(' ')[0]} ${tutor.apellidoPaterno}` : <span className="text-muted-foreground italic">No asignado</span>}
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); router.push(href); }}>
+                                <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); router.push(href); }}>
                                     Registrar Asistencia
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>

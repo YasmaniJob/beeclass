@@ -45,6 +45,7 @@ export function IncidenteFormFields({ formState, formActions }: IncidenteFormFie
             {listaIncidentesComunes.map(inc => (
                 <Button
                 key={inc}
+                type="button"
                 variant={
                     selectedIncidentes.includes(inc) ? 'default' : 'outline'
                 }

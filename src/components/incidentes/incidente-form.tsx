@@ -95,6 +95,7 @@ export function IncidenteForm({ incidenteToEdit }: IncidenteFormProps) {
             </CardContent>
             <CardFooter>
               <Button
+                type="button"
                 onClick={actions.handleSave}
                 className="w-full"
                 disabled={isSaveDisabled}

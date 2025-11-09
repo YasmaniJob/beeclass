@@ -93,7 +93,7 @@ export function IncidentesTable({ incidentes, onDelete }: IncidentesTableProps) 
                                 {format(new Date(i.fecha), 'P', {locale: es})}
                             </TableCell>
                             <TableCell className="text-right space-x-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewDetails(i)}>
+                                <Button type="button" variant="outline" size="sm" onClick={() => handleViewDetails(i)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     Detalles
                                 </Button>

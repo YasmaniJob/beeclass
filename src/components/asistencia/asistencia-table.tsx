@@ -110,41 +110,62 @@ export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes,
                                     return (
                                         <TableRow
                                             key={estudiante.numeroDocumento}
-                                            onClick={() => handleRowClick(estudiante.numeroDocumento)}
                                             className={cn({
-                                                'cursor-pointer': !isReadOnly && !isPermission,
-                                                'cursor-not-allowed': isReadOnly || isPermission,
-                                                'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50': record.status === 'presente',
-                                                'bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50': record.status === 'tarde',
-                                                'bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50': record.status === 'falta',
-                                                'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50': isPermission,
+                                                'bg-green-50 dark:bg-green-900/30': record.status === 'presente',
+                                                'bg-yellow-50 dark:bg-yellow-900/30': record.status === 'tarde',
+                                                'bg-red-50 dark:bg-red-900/30': record.status === 'falta',
+                                                'bg-purple-50 dark:bg-purple-900/30': isPermission,
                                             })}
                                         >
                                             <TableCell className="text-muted-foreground">{index + 1}</TableCell>
-                                            <TableCell className="font-medium">
+                                            <TableCell 
+                                                className={cn("font-medium", {
+                                                    'cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/50': !isReadOnly && !isPermission && record.status === 'presente',
+                                                    'cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/50': !isReadOnly && !isPermission && record.status === 'tarde',
+                                                    'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/50': !isReadOnly && !isPermission && record.status === 'falta',
+                                                    'cursor-not-allowed': isReadOnly || isPermission,
+                                                })}
+                                                onClick={() => !isReadOnly && !isPermission && handleRowClick(estudiante.numeroDocumento)}
+                                            >
                                                 {estudiante.nombreCompleto}
                                             </TableCell>
-                                            <TableCell className="text-center">
+                                            <TableCell 
+                                                className={cn("text-center", {
+                                                    'cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/50': !isReadOnly && !isPermission && record.status === 'presente',
+                                                    'cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/50': !isReadOnly && !isPermission && record.status === 'tarde',
+                                                    'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/50': !isReadOnly && !isPermission && record.status === 'falta',
+                                                    'cursor-not-allowed': isReadOnly || isPermission,
+                                                })}
+                                                onClick={() => !isReadOnly && !isPermission && handleRowClick(estudiante.numeroDocumento)}
+                                            >
                                                 <AsistenciaBadge status={record.status} />
                                             </TableCell>
-                                            <TableCell className="text-center">
+                                            <TableCell 
+                                                className={cn("text-center", {
+                                                    'cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/50': !isReadOnly && !isPermission && record.status === 'presente',
+                                                    'cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/50': !isReadOnly && !isPermission && record.status === 'tarde',
+                                                    'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/50': !isReadOnly && !isPermission && record.status === 'falta',
+                                                    'cursor-not-allowed': isReadOnly || isPermission,
+                                                })}
+                                                onClick={() => !isReadOnly && !isPermission && handleRowClick(estudiante.numeroDocumento)}
+                                            >
                                                 {record.entryTime ? record.entryTime.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '-'}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenHistorialSheet(estudiante);}}>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenHistorialSheet(estudiante)}>
                                                     <History className="h-4 w-4 text-blue-500" />
                                                     <span className="sr-only">Historial</span>
                                                 </Button>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {estudianteIncidentes.length > 0 ? (
-                                                    <Button type="button" variant="ghost" size="icon" className="relative" onClick={(e) => {e.stopPropagation(); handleOpenIncidenteHistorySheet(estudiante)}}>
+                                                    <Button type="button" variant="ghost" size="icon" className="relative" onClick={() => handleOpenIncidenteHistorySheet(estudiante)}>
                                                         <AlertTriangle className="h-4 w-4 text-orange-500" />
                                                         <Badge variant="destructive" className="absolute -top-1 -right-2 h-4 w-4 justify-center p-0 text-xs">{estudianteIncidentes.length}</Badge>
                                                         <span className="sr-only">Ver Incidentes</span>
                                                     </Button>
                                                 ) : (
-                                                    <Button type="button" variant="ghost" size="icon" onClick={(e) => {e.stopPropagation(); handleOpenIncidenteFormSheet(estudiante)}}>
+                                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenIncidenteFormSheet(estudiante)}>
                                                         <MessageSquarePlus className="h-4 w-4 text-muted-foreground" />
                                                         <span className="sr-only">Registrar Incidente</span>
                                                     </Button>
@@ -152,7 +173,7 @@ export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes,
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {isPermission ? (
-                                                    <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenPermisoSheet(estudiante); }}>
+                                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenPermisoSheet(estudiante)}>
                                                         <FileLock className="h-4 w-4 text-purple-500" />
                                                         <span className="sr-only">Permisos</span>
                                                     </Button>
@@ -168,14 +189,14 @@ export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes,
                     </div>
                 </CardContent>
             </Card>
-            {selectedEstudiante && (
+            {selectedEstudiante && isPermisoSheetOpen && (
                 <PermisoFormSheet
                     open={isPermisoSheetOpen}
                     onOpenChange={setIsPermisoSheetOpen}
                     estudiante={selectedEstudiante}
                 />
             )}
-             {selectedEstudiante && (
+             {selectedEstudiante && isIncidenteHistorySheetOpen && (
                 <IncidenteHistorySheet
                     open={isIncidenteHistorySheetOpen}
                     onOpenChange={setIsIncidenteHistorySheetOpen}
@@ -187,7 +208,7 @@ export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes,
                     }}
                 />
             )}
-            {selectedEstudiante && (
+            {selectedEstudiante && isIncidenteFormSheetOpen && (
                  <IncidenteFormSheet
                     open={isIncidenteFormSheetOpen}
                     onOpenChange={setIsIncidenteFormSheetOpen}
@@ -195,7 +216,7 @@ export function AsistenciaTable({ estudiantes, asistencia, permisos, incidentes,
                     onSaveSuccess={handleSaveIncidenteSuccess}
                 />
             )}
-            {selectedEstudiante && (
+            {selectedEstudiante && isHistorialSheetOpen && (
                 <HistorialAsistenciaSheet
                     open={isHistorialSheetOpen}
                     onOpenChange={setIsHistorialSheetOpen}

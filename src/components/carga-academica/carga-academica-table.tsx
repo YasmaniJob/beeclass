@@ -90,7 +90,7 @@ export function CargaAcademicaTable({
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm" onClick={() => handleOpenDialog(docente)}>
+                                        <Button type="button" variant="outline" size="sm" onClick={() => handleOpenDialog(docente)}>
                                             <Settings className="mr-2 h-4 w-4" />
                                             Gestionar Carga
                                         </Button>

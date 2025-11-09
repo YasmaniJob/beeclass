@@ -38,6 +38,7 @@ export function PermisoFormFields({
         <Popover>
           <PopoverTrigger asChild>
             <Button
+              type="button"
               id="date"
               variant={'outline'}
               className={cn(

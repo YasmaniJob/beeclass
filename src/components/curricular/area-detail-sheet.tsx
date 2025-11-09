@@ -105,12 +105,12 @@ export function AreaDetailSheet({
                                         <div key={competencia.id} className="group/item flex items-center justify-between text-sm p-3 border-b last:border-b-0">
                                             <span className="flex-1 pr-2">{competencia.nombre}</span>
                                             <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenCompetenciaDialog(competencia)}>
+                                                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenCompetenciaDialog(competencia)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive">
+                                                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive">
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
@@ -137,7 +137,7 @@ export function AreaDetailSheet({
                                 <p className="text-sm text-muted-foreground italic py-4 text-center">No hay competencias definidas.</p>
                             )}
                         </div>
-                        <Button variant="outline" className="w-full" onClick={() => handleOpenCompetenciaDialog()}>
+                        <Button type="button" variant="outline" className="w-full" onClick={() => handleOpenCompetenciaDialog()}>
                             <Plus className="mr-2 h-4 w-4"/>
                             Añadir Competencia
                         </Button>
@@ -145,7 +145,7 @@ export function AreaDetailSheet({
                     <SheetFooter className="flex-col sm:flex-row sm:justify-between">
                          <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive">Eliminar Área</Button>
+                                <Button type="button" variant="destructive">Eliminar Área</Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
@@ -162,7 +162,7 @@ export function AreaDetailSheet({
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
-                        <Button variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
+                        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cerrar</Button>
                     </SheetFooter>
                 </SheetContent>
             </Sheet>

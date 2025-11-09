@@ -92,7 +92,7 @@ export function IncidenteHistorySheet({ open, onOpenChange, estudiante, incident
                     )}
                 </div>
                  <SheetFooter className="flex-col sm:flex-row sm:justify-between items-center gap-2">
-                    <Button onClick={onRegisterNew} className="w-full sm:w-auto">
+                    <Button type="button" onClick={onRegisterNew} className="w-full sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Registrar Nuevo Incidente
                     </Button>
