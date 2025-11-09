@@ -11,7 +11,7 @@ const ASISTENCIAS_ESTUDIANTES_APPEND_RANGE = 'AsistenciasEstudiantes!A:L';
  * Obtiene el cliente autenticado de Google Sheets
  */
 export async function getGoogleSheetsAuth() {
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
     throw new Error('Google Sheets credentials not configured. Check your .env.local file.');
   }
 
@@ -19,7 +19,7 @@ export async function getGoogleSheetsAuth() {
     scopes: SCOPES,
     credentials: {
       type: 'service_account',
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     },
   });
