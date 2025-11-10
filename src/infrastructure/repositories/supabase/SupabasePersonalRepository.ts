@@ -29,9 +29,11 @@ export class SupabasePersonalRepository {
         previousEmail,
       };
 
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:9003');
+      // Usar URL relativa en el cliente, absoluta en el servidor
+      const siteUrl = typeof window !== 'undefined' 
+        ? '' // En el cliente, usar ruta relativa
+        : (process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
 
       const response = await fetch(`${siteUrl}/api/personal/auth-sync`, {
         method: 'POST',
@@ -122,10 +124,25 @@ export class SupabasePersonalRepository {
       }
 
       // Obtener horarios (tabla opcional - puede no existir)
-      const { data: horarios } = await supabase
-        .from('horarios')
-        .select('*')
-        .eq('personal_id', id);
+      let horarios: any[] | null = null;
+      if (!horariosTableChecked || horariosTableAvailable) {
+        const { data, error } = await supabase
+          .from('horarios')
+          .select('*')
+          .eq('personal_id', id);
+        
+        if (error) {
+          horariosTableChecked = true;
+          const tableMissing = error.code === '42P01' || error.code === 'PGRST204';
+          if (tableMissing) {
+            horariosTableAvailable = false;
+          }
+        } else {
+          horariosTableChecked = true;
+          horariosTableAvailable = true;
+          horarios = data;
+        }
+      }
 
       // Construir objeto Docente
       const docenteInput: DocenteInput = {
