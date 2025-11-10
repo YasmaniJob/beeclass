@@ -63,10 +63,28 @@ export default function DocentesPage() {
 
     const handleMassSave = async (nuevosDocentes: Docente[]) => {
         try {
-            for (const docente of nuevosDocentes) {
-                await addDocente(docente);
+            // Procesar en lotes de 5 para evitar sobrecarga
+            const BATCH_SIZE = 5;
+            let processed = 0;
+            
+            for (let i = 0; i < nuevosDocentes.length; i += BATCH_SIZE) {
+                const batch = nuevosDocentes.slice(i, i + BATCH_SIZE);
+                await Promise.all(batch.map(docente => addDocente(docente)));
+                processed += batch.length;
+                
+                // Mostrar progreso
+                if (processed < nuevosDocentes.length) {
+                    toast({ 
+                        title: 'Importando...', 
+                        description: `${processed} de ${nuevosDocentes.length} procesados` 
+                    });
+                }
             }
-            toast({ title: 'Importación masiva completa', description: `Se han añadido ${nuevosDocentes.length} nuevos miembros al personal.` });
+            
+            toast({ 
+                title: 'Importación masiva completa', 
+                description: `Se han añadido ${nuevosDocentes.length} nuevos miembros al personal.` 
+            });
         } catch (error) {
             toast({ 
                 variant: 'destructive',

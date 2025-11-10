@@ -234,18 +234,20 @@ export class SupabasePersonalRepository {
   }
 
   private mapPersonalRecord(personal: any): Result<Docente, DomainError> {
-    const asignaciones: DocenteAsignacion[] = (personal.asignaciones_docentes || []).map((a: any) => {
-      const gradoSeccion = Array.isArray(a.grados_secciones) ? a.grados_secciones[0] : a.grados_secciones;
-      return {
-        id: a.id,
-        grado: gradoSeccion?.grado ?? '',
-        seccion: gradoSeccion?.seccion ?? '',
-        rol: a.rol ?? undefined,
-        areaId: a.area_id ?? undefined,
-        gradoSeccionId: a.grado_seccion_id ?? undefined,
-        horasSemanales: a.horas_sisemanales ?? a.horas_semanales ?? undefined,
-      };
-    });
+    const asignaciones: DocenteAsignacion[] = (personal.asignaciones_docentes || [])
+      .filter((a: any) => a.activo !== false) // Filtrar solo asignaciones activas
+      .map((a: any) => {
+        const gradoSeccion = Array.isArray(a.grados_secciones) ? a.grados_secciones[0] : a.grados_secciones;
+        return {
+          id: a.id,
+          grado: gradoSeccion?.grado ?? '',
+          seccion: gradoSeccion?.seccion ?? '',
+          rol: a.rol ?? undefined,
+          areaId: a.area_id ?? undefined,
+          gradoSeccionId: a.grado_seccion_id ?? undefined,
+          horasSemanales: a.horas_sisemanales ?? a.horas_semanales ?? undefined,
+        };
+      });
 
     return toDocenteEntity({
       tipoDocumento: normalizeTipoDocumento(personal.tipo_documento),
@@ -281,6 +283,7 @@ export class SupabasePersonalRepository {
             area_id,
             rol,
             horas_semanales,
+            activo,
             grados_secciones (
               id,
               grado,
@@ -498,18 +501,16 @@ export class SupabasePersonalRepository {
         }
       }
 
-      const finalDocenteResult = await this.findById(personal.id);
-      if (!finalDocenteResult.isSuccess) {
-        return failure(finalDocenteResult.error);
-      }
-
-      const finalDocente = finalDocenteResult.value;
-      const authResult = await this.ensureAuthUser(finalDocente ?? docente, previousEmail);
+      // Sincronizar usuario de autenticación (puede fallar sin afectar el guardado)
+      const authResult = await this.ensureAuthUser(docente, previousEmail);
       if (!authResult.isSuccess) {
-        return failure(authResult.error);
+        console.warn('Auth sync failed:', authResult.error?.message);
+        // No fallar la operación completa si solo falla la sincronización de auth
       }
 
-      return success(finalDocente ?? docente);
+      // Retornar el docente guardado sin hacer otra consulta
+      // (la UI se refrescará automáticamente con refreshPersonal)
+      return success(docente);
     } catch (error) {
       return failure(new DomainError(`Database error: ${error}`));
     }
@@ -645,22 +646,22 @@ export class SupabasePersonalRepository {
         }
       }
 
-      const finalDocenteResult = await this.findById(personal.id);
-      if (!finalDocenteResult.isSuccess) {
-        return failure(finalDocenteResult.error);
+      // Construir el docente actualizado sin hacer otra consulta
+      const updatedDocente: Partial<Docente> = {
+        ...docente,
+        numeroDocumento,
+      };
+
+      // Sincronizar usuario de autenticación (puede fallar sin afectar la actualización)
+      if (updatedDocente.email) {
+        const authResult = await this.ensureAuthUser(updatedDocente as Docente, personal.email ?? undefined);
+        if (!authResult.isSuccess) {
+          console.warn('Auth sync failed:', authResult.error?.message);
+        }
       }
 
-      const finalDocente = finalDocenteResult.value;
-      if (!finalDocente) {
-        return success(null);
-      }
-
-      const authResult = await this.ensureAuthUser(finalDocente, personal.email ?? undefined);
-      if (!authResult.isSuccess) {
-        return failure(authResult.error);
-      }
-
-      return success(finalDocente);
+      // Retornar el docente actualizado
+      return success(updatedDocente as Docente);
     } catch (error) {
       return failure(new DomainError(`Database error: ${error}`));
     }

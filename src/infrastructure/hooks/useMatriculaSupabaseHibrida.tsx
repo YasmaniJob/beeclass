@@ -191,12 +191,30 @@ export function MatriculaSupabaseHibridaProvider({
     }
   }, []);
 
-  const refreshPersonal = useCallback(async () => {
+  const refreshPersonal = useCallback(async (forceRefresh = false) => {
     setLoading(prev => ({ ...prev, personal: true }));
     try {
+      // Intentar usar caché si no es refresh forzado
+      if (!forceRefresh && typeof window !== 'undefined') {
+        const { getCachedPersonal, cachePersonal } = await import('@/lib/cache/personal-cache');
+        const cached = getCachedPersonal();
+        if (cached) {
+          setPersonal(cached);
+          setLoading(prev => ({ ...prev, personal: false }));
+          return;
+        }
+      }
+
+      // Si no hay caché o es refresh forzado, consultar Supabase
       const result = await personalRepo.findAll();
       if (result.isSuccess) {
         setPersonal(result.value);
+        
+        // Guardar en caché
+        if (typeof window !== 'undefined') {
+          const { cachePersonal } = await import('@/lib/cache/personal-cache');
+          cachePersonal(result.value);
+        }
       } else {
         toast({
           variant: 'destructive',
@@ -381,7 +399,12 @@ export function MatriculaSupabaseHibridaProvider({
     try {
       const result = await personalRepo.save(personalData);
       if (result.isSuccess) {
-        await refreshPersonal();
+        // Invalidar caché
+        if (typeof window !== 'undefined') {
+          const { clearPersonalCache } = await import('@/lib/cache/personal-cache');
+          clearPersonalCache();
+        }
+        await refreshPersonal(true);
         toast({
           title: 'Éxito',
           description: 'Personal agregado correctamente'
@@ -412,7 +435,12 @@ export function MatriculaSupabaseHibridaProvider({
         : await personalRepo.update(numeroDocumento, personalData);
         
       if (result.isSuccess) {
-        await refreshPersonal();
+        // Invalidar caché
+        if (typeof window !== 'undefined') {
+          const { clearPersonalCache } = await import('@/lib/cache/personal-cache');
+          clearPersonalCache();
+        }
+        await refreshPersonal(true);
         toast({
           title: 'Éxito',
           description: 'Personal actualizado correctamente'
@@ -441,7 +469,12 @@ export function MatriculaSupabaseHibridaProvider({
     try {
       const result = await personalRepo.delete(numeroDocumento);
       if (result.isSuccess) {
-        await refreshPersonal();
+        // Invalidar caché
+        if (typeof window !== 'undefined') {
+          const { clearPersonalCache } = await import('@/lib/cache/personal-cache');
+          clearPersonalCache();
+        }
+        await refreshPersonal(true);
         toast({
           title: 'Éxito',
           description: 'Personal eliminado correctamente'
