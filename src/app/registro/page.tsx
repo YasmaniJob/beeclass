@@ -145,7 +145,7 @@ export default function RegistroPage() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-6 md:px-8">
             <div className="relative flex h-[min(780px,92vh)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-[0_35px_120px_-45px_rgba(15,23,42,0.45)] ring-1 ring-slate-100/70 md:flex-row">
-                <div className="relative flex h-full flex-1 flex-col bg-primary text-white">
+                <div className="relative hidden md:flex h-full flex-1 flex-col bg-primary text-white">
                     <div className="absolute inset-0" />
                     <div className="relative z-10 flex flex-col h-full">
                         <div className="flex items-center justify-between px-8 pt-8 sm:px-10">

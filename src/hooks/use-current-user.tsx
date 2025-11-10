@@ -154,8 +154,11 @@ export function CurrentUserProvider({ children, initialDocente }: CurrentUserPro
     try {
       const { error } = await signOutWithTimeout(LOGOUT_TIMEOUT_MS);
       if (error) {
-        remoteErrorMessage = error.message;
-        console.error('Error al cerrar sesión en Supabase:', error.message);
+        // Ignorar error si no hay sesión activa (es esperado)
+        if (error.message !== 'Auth session missing!') {
+          remoteErrorMessage = error.message;
+          console.error('Error al cerrar sesión en Supabase:', error.message);
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido al cerrar sesión.';
