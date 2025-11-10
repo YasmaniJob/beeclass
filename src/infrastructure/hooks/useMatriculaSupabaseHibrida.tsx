@@ -403,7 +403,14 @@ export function MatriculaSupabaseHibridaProvider({
 
   const updatePersonal = useCallback(async (numeroDocumento: string, personalData: Partial<Docente>): Promise<boolean> => {
     try {
-      const result = await personalRepo.update(numeroDocumento, personalData);
+      // Si personalData es un Docente completo (tiene numeroDocumento), usar save
+      // Si es un Partial, usar update
+      const isFullDocente = 'numeroDocumento' in personalData && personalData.numeroDocumento;
+      
+      const result = isFullDocente 
+        ? await personalRepo.save(personalData as Docente)
+        : await personalRepo.update(numeroDocumento, personalData);
+        
       if (result.isSuccess) {
         await refreshPersonal();
         toast({
@@ -415,12 +422,17 @@ export function MatriculaSupabaseHibridaProvider({
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'No se pudo actualizar el personal'
+          description: result.error?.message || 'No se pudo actualizar el personal'
         });
         return false;
       }
     } catch (error) {
       console.error('Error updating personal:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error desconocido'
+      });
       return false;
     }
   }, [refreshPersonal, toast]);
