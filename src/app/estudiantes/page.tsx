@@ -298,7 +298,7 @@ export default function EstudiantesPage() {
         <SeccionesTable
             grado={grado}
             secciones={seccionesPorGrado[grado] || []}
-            estudiantesPorSeccion={estudiantesPorSeccion}
+            estudiantesPorSeccion={estudiantesPorSeccionMap}
             onDeleteSeccion={(seccion) => handleDeleteSeccion(grado, seccion)}
         />
       </CardContent>
@@ -318,7 +318,7 @@ export default function EstudiantesPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={loading.estudiantes ? "secondary" : "default"}>
-            {estudiantes.length} estudiantes
+            {loading.estudiantes ? '...' : `${estudiantes.length} estudiante${estudiantes.length !== 1 ? 's' : ''}`}
           </Badge>
           <Button
             variant="outline"
