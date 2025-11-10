@@ -55,21 +55,29 @@ export default function PersonalizacionPage() {
     setLocalNivelInstitucion(nivelInstitucion);
   }, [appName, institutionName, themeColor, logoUrl, loginImageUrl, nivelInstitucion]);
 
-  const handleSaveAppConfig = () => {
-    // Guardar todo en localStorage y actualizar el contexto
-    saveConfig({ 
-        appName: localAppName, 
-        institutionName: localInstitutionName, 
-        themeColor: localThemeColor,
-        logoUrl: localLogoUrl,
-        loginImageUrl: localLoginImageUrl,
-        nivelInstitucion: localNivelInstitucion,
-    });
-    
-    toast({
-      title: 'Personalización guardada',
-      description: 'Recarga la página para ver todos los cambios aplicados.',
-    });
+  const handleSaveAppConfig = async () => {
+    try {
+      // Guardar en la base de datos y actualizar el contexto
+      await saveConfig({ 
+          appName: localAppName, 
+          institutionName: localInstitutionName, 
+          themeColor: localThemeColor,
+          logoUrl: localLogoUrl,
+          loginImageUrl: localLoginImageUrl,
+          nivelInstitucion: localNivelInstitucion,
+      });
+      
+      toast({
+        title: 'Personalización guardada',
+        description: 'La configuración se ha guardado correctamente y está disponible para todos los usuarios.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error al guardar',
+        description: 'No se pudo guardar la configuración. Verifica que tengas permisos de administrador.',
+        variant: 'destructive',
+      });
+    }
   };
 
 

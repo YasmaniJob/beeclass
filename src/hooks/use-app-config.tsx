@@ -4,13 +4,7 @@
 import { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
 import { defaultColor, hexToHsl } from '@/lib/colors';
 import { Nivel } from '@/lib/definitions';
-
-const APP_NAME_KEY = 'app_config_name';
-const APP_INSTITUTION_NAME_KEY = 'app_config_institution_name';
-const THEME_COLOR_KEY = 'app_config_theme_color';
-const LOGO_URL_KEY = 'app_config_logo_url';
-const LOGIN_IMAGE_URL_KEY = 'app_config_login_image_url';
-const NIVEL_INSTITUCION_KEY = 'app_config_nivel_institucion';
+import { getConfiguracionApp, updateConfiguracionApp, type ConfiguracionApp } from '@/server/actions/configuracion-app';
 
 const DEFAULT_APP_NAME = 'Beeclass';
 const DEFAULT_INSTITUTION_NAME = '';
@@ -40,48 +34,6 @@ interface AppConfigContextType extends ConfigData {
 
 const AppConfigContext = createContext<AppConfigContextType | undefined>(undefined);
 
-function AppConfigInitializer({ onLoaded }: { onLoaded: () => void }) {
-    const {
-        setAppName,
-        setInstitutionName,
-        setThemeColor,
-        setLogoUrl,
-        setLoginImageUrl,
-        setNivelInstitucion,
-    } = useAppConfig();
-
-    useEffect(() => {
-        // Only run on client side
-        if (typeof window === 'undefined') {
-            onLoaded();
-            return;
-        }
-
-        try {
-            const storedName = localStorage.getItem(APP_NAME_KEY);
-            const storedInstitutionName = localStorage.getItem(APP_INSTITUTION_NAME_KEY);
-            const storedColor = localStorage.getItem(THEME_COLOR_KEY);
-            const storedLogoUrl = localStorage.getItem(LOGO_URL_KEY);
-            const storedLoginImageUrl = localStorage.getItem(LOGIN_IMAGE_URL_KEY);
-            const storedNivel = localStorage.getItem(NIVEL_INSTITUCION_KEY) as Nivel | null;
-
-            if (storedName) setAppName(storedName);
-            if (storedInstitutionName) setInstitutionName(storedInstitutionName);
-            if (storedColor) setThemeColor(storedColor);
-            if (storedLogoUrl) setLogoUrl(storedLogoUrl);
-            if (storedLoginImageUrl) setLoginImageUrl(storedLoginImageUrl);
-            if (storedNivel) setNivelInstitucion(storedNivel);
-
-        } catch (error) {
-            console.error("Could not access localStorage. Using default values.");
-        } finally {
-            onLoaded();
-        }
-    }, [setAppName, setInstitutionName, setThemeColor, setLogoUrl, setLoginImageUrl, setNivelInstitucion, onLoaded]);
-
-    return null;
-}
-
 export function AppConfigProvider({ children }: { children: ReactNode }) {
     const [appName, setAppNameState] = useState(DEFAULT_APP_NAME);
     const [institutionName, setInstitutionNameState] = useState(DEFAULT_INSTITUTION_NAME);
@@ -91,6 +43,28 @@ export function AppConfigProvider({ children }: { children: ReactNode }) {
     const [nivelInstitucion, setNivelInstitucionState] = useState<Nivel>(DEFAULT_NIVEL_INSTITUCION);
     const [isLoaded, setIsLoaded] = useState(false);
 
+    // Cargar configuración desde la base de datos al montar
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                const config = await getConfiguracionApp();
+                
+                setAppNameState(config.app_name);
+                setInstitutionNameState(config.institution_name);
+                setThemeColorState(config.theme_color);
+                setLogoUrlState(config.logo_url);
+                setLoginImageUrlState(config.login_image_url);
+                setNivelInstitucionState(config.nivel_institucion as Nivel);
+            } catch (error) {
+                console.error("Error al cargar configuración. Usando valores por defecto.", error);
+            } finally {
+                setIsLoaded(true);
+            }
+        };
+
+        loadConfig();
+    }, []);
+
     const setAppName = (name: string) => setAppNameState(name);
     const setInstitutionName = (name: string) => setInstitutionNameState(name);
     const setThemeColor = (color: string) => setThemeColorState(color);
@@ -98,36 +72,33 @@ export function AppConfigProvider({ children }: { children: ReactNode }) {
     const setLoginImageUrl = (url: string) => setLoginImageUrlState(url);
     const setNivelInstitucion = (nivel: Nivel) => setNivelInstitucionState(nivel);
 
-    const saveConfig = useCallback((data: ConfigData) => {
-        // Only save to localStorage on client side
-        if (typeof window === 'undefined') {
-            // Just update state on server side
-            setAppNameState(data.appName);
-            setInstitutionNameState(data.institutionName);
-            setThemeColorState(data.themeColor);
-            setLogoUrlState(data.logoUrl);
-            setLoginImageUrlState(data.loginImageUrl);
-            setNivelInstitucionState(data.nivelInstitucion);
-            return;
-        }
-
+    const saveConfig = useCallback(async (data: ConfigData) => {
         try {
-            localStorage.setItem(APP_NAME_KEY, data.appName);
-            localStorage.setItem(APP_INSTITUTION_NAME_KEY, data.institutionName);
-            localStorage.setItem(THEME_COLOR_KEY, data.themeColor);
-            localStorage.setItem(LOGO_URL_KEY, data.logoUrl);
-            localStorage.setItem(LOGIN_IMAGE_URL_KEY, data.loginImageUrl);
-            localStorage.setItem(NIVEL_INSTITUCION_KEY, data.nivelInstitucion);
+            // Actualizar en la base de datos
+            const result = await updateConfiguracionApp({
+                app_name: data.appName,
+                institution_name: data.institutionName,
+                theme_color: data.themeColor,
+                logo_url: data.logoUrl,
+                login_image_url: data.loginImageUrl,
+                nivel_institucion: data.nivelInstitucion,
+            });
 
-            setAppNameState(data.appName);
-            setInstitutionNameState(data.institutionName);
-            setThemeColorState(data.themeColor);
-            setLogoUrlState(data.logoUrl);
-            setLoginImageUrlState(data.loginImageUrl);
-            setNivelInstitucionState(data.nivelInstitucion);
-
+            if (result.success) {
+                // Actualizar el estado local
+                setAppNameState(data.appName);
+                setInstitutionNameState(data.institutionName);
+                setThemeColorState(data.themeColor);
+                setLogoUrlState(data.logoUrl);
+                setLoginImageUrlState(data.loginImageUrl);
+                setNivelInstitucionState(data.nivelInstitucion);
+            } else {
+                console.error("Error al guardar configuración:", result.error);
+                throw new Error(result.error);
+            }
         } catch (error) {
-            console.error("Could not save settings to localStorage.");
+            console.error("Error al guardar configuración:", error);
+            throw error;
         }
     }, []);
 
@@ -144,7 +115,6 @@ export function AppConfigProvider({ children }: { children: ReactNode }) {
 
     return (
         <AppConfigContext.Provider value={value}>
-            <AppConfigInitializer onLoaded={() => setIsLoaded(true)} />
             {children}
         </AppConfigContext.Provider>
     );
