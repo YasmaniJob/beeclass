@@ -63,7 +63,7 @@ CREATE POLICY "Solo administradores pueden modificar configuracion_app"
         EXISTS (
             SELECT 1 FROM personal
             WHERE personal.id = auth.uid()
-            AND personal.rol = 'Administrador'
+            AND personal.rol = 'Admin'
         )
     );
 

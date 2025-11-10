@@ -91,7 +91,7 @@ export async function updateConfiguracionApp(
     // En producción, esto debería ser más estricto
     if (personalError) {
       console.warn('No se pudo verificar el rol del usuario. Permitiendo operación en modo desarrollo.');
-    } else if (personal && personal.rol !== 'Administrador') {
+    } else if (personal && personal.rol !== 'Admin') {
       return { success: false, error: 'Solo los administradores pueden modificar la configuración' };
     }
 

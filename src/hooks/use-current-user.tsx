@@ -188,7 +188,7 @@ export function CurrentUserProvider({ children, initialDocente }: CurrentUserPro
       role: metadata.role ?? 'Admin',
     };
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -198,6 +198,28 @@ export function CurrentUserProvider({ children, initialDocente }: CurrentUserPro
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    // Crear el registro en la tabla personal
+    if (data.user) {
+      const { error: insertError } = await supabase
+        .from('personal')
+        .insert({
+          id: data.user.id,
+          email: email,
+          nombres: metadata.nombres || '',
+          apellido_paterno: metadata.apellidoPaterno || '',
+          apellido_materno: metadata.apellidoMaterno || '',
+          tipo_documento: 'DNI',
+          numero_documento: data.user.id.substring(0, 8), // Usar parte del UUID como número temporal
+          rol: 'Admin', // Primer usuario registrado es administrador
+          activo: true,
+        });
+
+      if (insertError) {
+        console.error('Error al crear registro en personal:', insertError);
+        // No lanzamos error aquí para no bloquear el registro
+      }
     }
   }, [supabase]);
 
