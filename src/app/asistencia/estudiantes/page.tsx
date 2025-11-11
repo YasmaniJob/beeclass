@@ -77,12 +77,13 @@ export default function AsistenciaDashboardPage() {
   const { grados, seccionesPorGrado } = useMemo(() => {
     if (!user) return { grados: [], seccionesPorGrado: {} };
 
-    // Si NO es docente, muestra todo (Admin, Auxiliar, Director, etc.)
-    if (!isTeacherView) {
+    // Solo Admin puede ver todo
+    const isAdmin = user.rol === 'Admin' || user.rol === 'Director' || user.rol === 'Coordinador';
+    if (isAdmin) {
       return { grados: allGrados, seccionesPorGrado: allSecciones };
     }
     
-    // Si es docente, filtra para mostrar solo sus asignaciones
+    // Docentes y Auxiliares: filtrar por sus asignaciones
     const asignaciones = user.asignaciones?.filter(a => !a.areaId) || [];
     const gradosAsignados = [...new Set(asignaciones.map(a => a.grado))].sort();
     
@@ -96,7 +97,7 @@ export default function AsistenciaDashboardPage() {
     Object.values(seccionesAsignadas).forEach(s => s.sort());
 
     return { grados: gradosAsignados, seccionesPorGrado: seccionesAsignadas };
-  }, [user, allGrados, allSecciones, isTeacherView]);
+  }, [user, allGrados, allSecciones]);
   
 
   const { isMobile, isMounted } = useIsMobile();

@@ -5,6 +5,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { DashboardInstitucional } from '@/components/dashboard/dashboard-institucional';
+import { DashboardDocente } from '@/components/dashboard/dashboard-docente';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
@@ -28,6 +29,14 @@ export default function DashboardPage() {
             </div>
         </div>
     );
+  }
+  
+  // Mostrar dashboard específico según el rol
+  const isDocente = user.rol === 'Docente' || user.rol === 'Auxiliar';
+  const isAdmin = user.rol === 'Admin' || user.rol === 'Director' || user.rol === 'Coordinador';
+  
+  if (isDocente) {
+    return <DashboardDocente />;
   }
   
   return <DashboardInstitucional />;

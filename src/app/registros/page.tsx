@@ -550,23 +550,40 @@ function filterAreasByGrado(
   if (!grado) return [];
   const allowedSet = allowedIds && allowedIds.length > 0 ? new Set(allowedIds) : undefined;
 
-  return (areasPorGrado[grado] || [])
-    .map((area) => {
-      const value = (area.id ?? area.nombre ?? "").trim();
-      const label = (area.nombre ?? area.id ?? "").trim();
-      const option = value
-        ? {
-            value,
-            label: label || value,
-          }
-        : null;
-      if (!option) return null;
-      if (allowedSet && !allowedSet.has(option.value)) {
-        return null;
-      }
-      return option;
-    })
-    .filter((option): option is SelectOption => Boolean(option));
+  const options: SelectOption[] = [];
+  
+  // Agregar áreas regulares del grado
+  (areasPorGrado[grado] || []).forEach((area) => {
+    const value = (area.id ?? area.nombre ?? "").trim();
+    const label = (area.nombre ?? area.id ?? "").trim();
+    const option = value
+      ? {
+          value,
+          label: label || value,
+        }
+      : null;
+    if (!option) return;
+    if (allowedSet && !allowedSet.has(option.value)) {
+      return;
+    }
+    options.push(option);
+  });
+  
+  // Si hay competencias transversales en los IDs permitidos, agregarlas
+  if (allowedSet) {
+    const esSecundaria = grado?.toLowerCase().includes('secundaria') || 
+                         parseInt(grado?.match(/\d+/)?.[0] || '0') > 6;
+    const transversalId = esSecundaria ? 't-secundaria' : 't-primaria';
+    
+    if (allowedSet.has(transversalId)) {
+      options.push({
+        value: transversalId,
+        label: 'Competencias Transversales'
+      });
+    }
+  }
+  
+  return options.sort((a, b) => a.label.localeCompare(b.label, 'es'));
 }
 
 async function downloadFile({ url, body, filename }: DownloadParams) {
@@ -669,9 +686,64 @@ export default function RegistrosPage() {
     return docentes.find(d => d.numeroDocumento === selectedDocenteId);
   }, [docentes, selectedDocenteId]);
 
-  const gradoOptions = useMemo(() => buildOptionsFromMap(seccionesPorGrado), [seccionesPorGrado]);
+  // Filtrar grados según las asignaciones del usuario (o docente seleccionado si es admin)
+  const gradoOptions = useMemo(() => {
+    const targetUser = isPrivileged && selectedDocente ? selectedDocente : user;
+    
+    // Si es admin sin docente seleccionado, mostrar todos los grados
+    if (isPrivileged && (!selectedDocenteId || selectedDocenteId === "__ninguno__")) {
+      return buildOptionsFromMap(seccionesPorGrado);
+    }
+    
+    // Si no hay asignaciones, no mostrar grados
+    if (!targetUser?.asignaciones?.length) {
+      return [];
+    }
+    
+    // Obtener grados únicos de las asignaciones
+    const gradosAsignados = new Set(
+      targetUser.asignaciones
+        .map(a => a.grado)
+        .filter((g): g is string => Boolean(g))
+    );
+    
+    // Filtrar solo los grados asignados
+    return Array.from(gradosAsignados)
+      .sort((a, b) => a.localeCompare(b, "es"))
+      .map(grado => ({ value: grado, label: grado }));
+  }, [seccionesPorGrado, user, selectedDocente, isPrivileged, selectedDocenteId]);
+  
   const [grado, setGrado] = useState<string>("");
-  const seccionOptions = useMemo(() => buildSections(seccionesPorGrado, grado), [seccionesPorGrado, grado]);
+  
+  // Filtrar secciones según las asignaciones del usuario (o docente seleccionado si es admin)
+  const seccionOptions = useMemo(() => {
+    if (!grado) return [];
+    
+    const targetUser = isPrivileged && selectedDocente ? selectedDocente : user;
+    
+    // Si es admin sin docente seleccionado, mostrar todas las secciones del grado
+    if (isPrivileged && (!selectedDocenteId || selectedDocenteId === "__ninguno__")) {
+      return buildSections(seccionesPorGrado, grado);
+    }
+    
+    // Si no hay asignaciones, no mostrar secciones
+    if (!targetUser?.asignaciones?.length) {
+      return [];
+    }
+    
+    // Obtener secciones únicas del grado seleccionado
+    const seccionesAsignadas = new Set(
+      targetUser.asignaciones
+        .filter(a => a.grado === grado)
+        .map(a => a.seccion)
+        .filter((s): s is string => Boolean(s))
+    );
+    
+    // Filtrar solo las secciones asignadas
+    return Array.from(seccionesAsignadas)
+      .sort((a, b) => a.localeCompare(b, "es"))
+      .map(seccion => ({ value: seccion, label: seccion }));
+  }, [seccionesPorGrado, grado, user, selectedDocente, isPrivileged, selectedDocenteId]);
   const [seccion, setSeccion] = useState<string>("");
   const assignedAreaIds = useMemo(() => {
     // Si es admin y ha seleccionado un docente, usar las asignaciones del docente
@@ -681,16 +753,51 @@ export default function RegistrosPage() {
       return [] as string[];
     }
 
-    return targetUser.asignaciones
-      .filter((assignment) => {
-        if (!assignment.areaId) return false;
-        const matchesGrado = !grado || assignment.grado === grado;
-        const matchesSeccion = !seccion || assignment.seccion === seccion;
-        return matchesGrado && matchesSeccion;
-      })
-      .map((assignment) => assignment.areaId!)
-      .filter((value, index, self) => self.indexOf(value) === index);
+    const areaIds = new Set<string>();
+    
+    // Verificar si el docente es tutor en el grado/sección seleccionado
+    const esTutorEnSeccion = targetUser.asignaciones.some((assignment) => {
+      const matchesGrado = !grado || assignment.grado === grado;
+      const matchesSeccion = !seccion || assignment.seccion === seccion;
+      return matchesGrado && matchesSeccion && assignment.rol === 'Docente y Tutor';
+    });
+    
+    // Si es tutor, agregar competencias transversales automáticamente
+    if (esTutorEnSeccion) {
+      // Determinar el nivel basado en el grado
+      const nivelTransversal = grado?.toLowerCase().includes('secundaria') || 
+                               parseInt(grado?.match(/\d+/)?.[0] || '0') > 6
+        ? 't-secundaria'
+        : 't-primaria';
+      areaIds.add(nivelTransversal);
+    }
+    
+    // Agregar áreas asignadas explícitamente
+    targetUser.asignaciones.forEach((assignment) => {
+      if (!assignment.areaId) return;
+      const matchesGrado = !grado || assignment.grado === grado;
+      const matchesSeccion = !seccion || assignment.seccion === seccion;
+      if (matchesGrado && matchesSeccion) {
+        areaIds.add(assignment.areaId);
+      }
+    });
+
+    return Array.from(areaIds);
   }, [user, selectedDocente, isPrivileged, grado, seccion]);
+
+  // Obtener competencias transversales según el grado
+  const competenciasTransversales = useMemo(() => {
+    if (!grado) return null;
+    
+    // Determinar el nivel basado en el grado
+    const esSecundaria = grado?.toLowerCase().includes('secundaria') || 
+                         parseInt(grado?.match(/\d+/)?.[0] || '0') > 6;
+    
+    return {
+      id: esSecundaria ? 't-secundaria' : 't-primaria',
+      nombre: 'Competencias Transversales'
+    };
+  }, [grado]);
 
   // Obtener todas las áreas únicas del sistema (para administradores)
   const todasLasAreasDelSistema = useMemo(() => {
@@ -704,6 +811,11 @@ export default function RegistrosPage() {
       }
     });
     
+    // Agregar competencias transversales si hay un grado seleccionado
+    if (competenciasTransversales) {
+      areasUnicas.set(competenciasTransversales.id, competenciasTransversales);
+    }
+    
     return Array.from(areasUnicas.values())
       .map(area => {
         const value = (area.id ?? area.nombre ?? "").trim();
@@ -712,7 +824,7 @@ export default function RegistrosPage() {
       })
       .filter((option): option is SelectOption => Boolean(option))
       .sort((a, b) => a.label.localeCompare(b.label, 'es'));
-  }, [areasPorGrado]);
+  }, [areasPorGrado, competenciasTransversales]);
 
   const areaOptions = useMemo(() => {
     const hasNoDocenteSelected = !selectedDocenteId || selectedDocenteId === "__ninguno__";

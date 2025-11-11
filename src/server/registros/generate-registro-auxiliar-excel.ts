@@ -161,23 +161,145 @@ export function generateRegistroAuxiliarExcel(
 
   const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
 
+  // Configurar anchos de columna
   worksheet["!cols"] = [
-    { wch: 4 },
-    { wch: 40 },
+    { wch: 5 },  // N° más ancho
+    { wch: 45 }, // Nombres más ancho
     ...normalizedGroups.flatMap(group =>
       group.subcolumns.map((subcolumn, index) => ({
-        wch: index === group.subcolumns.length - 1 ? 14 : Math.min(Math.max(subcolumn.length * 1.2, 18), 36),
+        wch: index === group.subcolumns.length - 1 ? 15 : Math.min(Math.max(subcolumn.length * 1.2, 20), 38),
       })),
     ),
   ];
 
+  // Configurar alturas de fila
   worksheet["!rows"] = [
-    { hpt: 22 },
-    { hpt: 24 },
-    { hpt: 18 },
-    { hpt: 18 },
-    { hpt: 16 },
+    { hpt: 28 },  // Institución
+    { hpt: 26 },  // Título
+    { hpt: 20 },  // Metadata
+    { hpt: 22 },  // Header competencias
+    { hpt: 18 },  // Subheader capacidades
+    ...Array(totalRows).fill({ hpt: 20 }), // Filas de estudiantes
   ];
+
+  // Aplicar estilos a las celdas
+  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+  
+  // Estilos para el header institucional (fila 0)
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!worksheet[address]) continue;
+    worksheet[address].s = {
+      font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "59AB45" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+  }
+
+  // Estilos para el título (fila 1)
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 1, c: C });
+    if (!worksheet[address]) continue;
+    worksheet[address].s = {
+      font: { bold: true, sz: 13, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4A9635" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+  }
+
+  // Estilos para metadata (fila 2)
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 2, c: C });
+    if (!worksheet[address]) continue;
+    worksheet[address].s = {
+      font: { bold: true, sz: 10, color: { rgb: "333333" } },
+      fill: { fgColor: { rgb: "E8F5E3" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+  }
+
+  // Estilos para header de competencias (fila 3)
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 3, c: C });
+    if (!worksheet[address]) continue;
+    worksheet[address].s = {
+      font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "59AB45" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "medium", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+  }
+
+  // Estilos para subheader de capacidades (fila 4)
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 4, c: C });
+    if (!worksheet[address]) continue;
+    worksheet[address].s = {
+      font: { bold: true, sz: 9, color: { rgb: "333333" } },
+      fill: { fgColor: { rgb: "D4EAD0" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "medium", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+  }
+
+  // Estilos para filas de estudiantes (desde fila 5 en adelante)
+  for (let R = 5; R <= range.e.r; ++R) {
+    const isEven = (R - 5) % 2 === 0;
+    const fillColor = isEven ? "FFFFFF" : "F9F9F9";
+    
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!worksheet[address]) {
+        worksheet[address] = { t: 's', v: '' };
+      }
+      
+      const isFirstCol = C === 0;
+      const isSecondCol = C === 1;
+      
+      worksheet[address].s = {
+        font: { sz: 9, color: { rgb: "000000" } },
+        fill: { fgColor: { rgb: fillColor } },
+        alignment: { 
+          horizontal: isFirstCol ? "center" : (isSecondCol ? "left" : "center"), 
+          vertical: "center" 
+        },
+        border: {
+          top: { style: "thin", color: { rgb: "CCCCCC" } },
+          bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+          left: { style: "thin", color: { rgb: "CCCCCC" } },
+          right: { style: "thin", color: { rgb: "CCCCCC" } },
+        },
+      };
+    }
+  }
 
   const merges: XLSX.Range[] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: totalColumns - 1 } },

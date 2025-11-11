@@ -128,7 +128,7 @@ export class SupabasePersonalRepository {
       if (!horariosTableChecked || horariosTableAvailable) {
         const { data, error } = await supabase
           .from('horarios')
-          .select('*')
+          .select('dia_semana, hora_id, asignacion_id, actividad_nombre')
           .eq('personal_id', id);
         
         if (error) {
@@ -167,7 +167,15 @@ export class SupabasePersonalRepository {
           } satisfies DocenteAsignacion;
         }),
         horario: horarios?.reduce((acc, h) => {
-          acc[`${h.dia_semana}-${h.hora_id}`] = h.asignacion_id;
+          // Si tiene actividad_nombre, usar formato "activity:{nombre}"
+          // Si tiene asignacion_id, usar el ID directamente
+          const value = h.actividad_nombre 
+            ? `activity:${h.actividad_nombre}` 
+            : h.asignacion_id;
+          
+          if (value) {
+            acc[`${h.dia_semana}-${h.hora_id}`] = value;
+          }
           return acc;
         }, {} as Record<string, string>) || {},
         personalId: personal.id,
@@ -459,47 +467,117 @@ export class SupabasePersonalRepository {
         }
       }
 
-      // Eliminar / insertar horarios sólo si la tabla existe
-      if (!horariosTableChecked || horariosTableAvailable) {
+      // Guardar horarios
+      if (docente.horario && Object.keys(docente.horario).length > 0) {
+        console.log('🔄 Guardando horarios para personal_id:', personal.id);
+        
+        // Primero eliminar horarios existentes
         const { error: deleteHorariosError } = await supabase
           .from('horarios')
           .delete()
           .eq('personal_id', personal.id);
 
         if (deleteHorariosError) {
-          horariosTableChecked = true;
-          const tableMissing = deleteHorariosError.code === '42P01' || deleteHorariosError.code === 'PGRST302';
+          const tableMissing = deleteHorariosError.code === '42P01' || deleteHorariosError.code === 'PGRST204';
           if (tableMissing) {
+            console.warn('⚠️ Tabla horarios no existe. Ejecuta MIGRACION-TABLA-HORARIOS.sql');
             horariosTableAvailable = false;
           } else {
-            console.warn('Error deleting horarios:', deleteHorariosError);
+            console.error('❌ Error eliminando horarios existentes:', {
+              message: deleteHorariosError.message,
+              code: deleteHorariosError.code,
+              details: deleteHorariosError.details
+            });
+            return failure(new DomainError(`Error eliminando horarios: ${deleteHorariosError.message || 'Error desconocido'}`));
           }
-        } else {
-          horariosTableChecked = true;
-          horariosTableAvailable = true;
-          if (docente.horario) {
-            const horariosData = Object.entries(docente.horario).map(([key, asignacionId]) => {
-              const [diaSemana, horaId] = key.split('-');
+        }
+
+        // Solo insertar si la tabla existe
+        if (horariosTableAvailable) {
+          const horariosData = Object.entries(docente.horario).map(([key, value]) => {
+            const [diaSemana, horaId] = key.split('-');
+            
+            // Determinar si es una asignación o actividad personalizada
+            // Las actividades personalizadas tienen formato: "act-custom-{timestamp}" o "activity:{nombre}"
+            const isCustomActivity = typeof value === 'string' && (
+              value.startsWith('act-custom-') || 
+              value.startsWith('activity:')
+            );
+            
+            if (isCustomActivity) {
+              // Extraer nombre de actividad si tiene formato "activity:{nombre}"
+              const activityName = value.startsWith('activity:') 
+                ? value.substring(9) 
+                : value; // Usar el ID completo como nombre temporal
+              
               return {
                 personal_id: personal.id,
                 dia_semana: diaSemana,
                 hora_id: horaId,
-                asignacion_id: asignacionId,
+                asignacion_id: null,
+                actividad_nombre: activityName,
               };
-            });
-
-            if (horariosData.length > 0) {
-              const { error: insertHorariosError } = await supabase
-                .from('horarios')
-                .insert(horariosData);
-
-              if (insertHorariosError) {
-                console.warn('Error inserting horarios:', insertHorariosError);
-              }
+            } else {
+              // Es una asignación docente normal
+              return {
+                personal_id: personal.id,
+                dia_semana: diaSemana,
+                hora_id: horaId,
+                asignacion_id: value,
+                actividad_nombre: null,
+              };
             }
+          });
+
+          if (horariosData.length > 0) {
+            console.log('📝 Intentando guardar horarios:', horariosData);
+            
+            const { data: insertResult, error: insertHorariosError } = await supabase
+              .from('horarios')
+              .insert(horariosData)
+              .select();
+
+            if (insertHorariosError) {
+              console.error('❌ Error insertando horarios:', {
+                message: insertHorariosError.message,
+                details: insertHorariosError.details,
+                hint: insertHorariosError.hint,
+                code: insertHorariosError.code,
+                fullError: insertHorariosError
+              });
+              
+              // Verificar si es un error de columna faltante
+              if (insertHorariosError.code === '42703' || insertHorariosError.message?.includes('actividad_nombre')) {
+                return failure(new DomainError(
+                  '⚠️ La tabla horarios no tiene la columna actividad_nombre. ' +
+                  'Ejecuta la migración MIGRACION-TABLA-HORARIOS-V2.sql en Supabase SQL Editor.'
+                ));
+              }
+              
+              return failure(new DomainError(
+                `Error guardando horarios: ${insertHorariosError.message || 'Error desconocido'}. ` +
+                `Código: ${insertHorariosError.code}. Detalles: ${insertHorariosError.details || 'N/A'}`
+              ));
+            }
+            console.log(`✅ Horarios guardados exitosamente: ${horariosData.length} bloques`, insertResult);
+          }
+        }
+      } else {
+        // Si no hay horarios, eliminar los existentes
+        const { error: deleteHorariosError } = await supabase
+          .from('horarios')
+          .delete()
+          .eq('personal_id', personal.id);
+
+        if (deleteHorariosError) {
+          const tableMissing = deleteHorariosError.code === '42P01' || deleteHorariosError.code === 'PGRST204';
+          if (!tableMissing) {
+            console.error('Error eliminando horarios:', deleteHorariosError);
           }
         }
       }
+      
+      horariosTableChecked = true;
 
       // Sincronizar usuario de autenticación (puede fallar sin afectar el guardado)
       const authResult = await this.ensureAuthUser(docente, previousEmail);
@@ -647,14 +725,24 @@ export class SupabasePersonalRepository {
         }
       }
 
-      // Si hay horarios nuevos, actualizarlos (si la tabla existe)
-      if (docente.horario) {
-        try {
-          await supabase
-            .from('horarios')
-            .delete()
-            .eq('personal_id', personal.id);
+      // Si hay horarios nuevos, actualizarlos
+      if (docente.horario !== undefined) {
+        // Eliminar horarios existentes
+        const { error: deleteError } = await supabase
+          .from('horarios')
+          .delete()
+          .eq('personal_id', personal.id);
 
+        if (deleteError) {
+          const tableMissing = deleteError.code === '42P01' || deleteError.code === 'PGRST204';
+          if (!tableMissing) {
+            console.error('Error eliminando horarios:', deleteError);
+            return failure(new DomainError(`Error eliminando horarios: ${deleteError.message}`));
+          }
+        }
+
+        // Insertar nuevos horarios si hay datos
+        if (Object.keys(docente.horario).length > 0) {
           const horariosData = Object.entries(docente.horario).map(([key, asignacionId]) => {
             const [diaSemana, horaId] = key.split('-');
             return {
@@ -666,13 +754,16 @@ export class SupabasePersonalRepository {
           });
 
           if (horariosData.length > 0) {
-            await supabase
+            const { error: insertError } = await supabase
               .from('horarios')
               .insert(horariosData);
+
+            if (insertError) {
+              console.error('Error insertando horarios:', insertError);
+              return failure(new DomainError(`Error guardando horarios: ${insertError.message}`));
+            }
+            console.log(`✅ Horarios actualizados: ${horariosData.length} bloques`);
           }
-        } catch (error) {
-          // Tabla horarios no existe, continuar sin error
-          console.log('Tabla horarios no disponible, continuando...');
         }
       }
 

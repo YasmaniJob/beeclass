@@ -6,11 +6,11 @@ import { useHorario, ActividadPedagogica } from '@/hooks/use-horario';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HorarioTable } from '@/components/horario/horario-table';
 import { PlaceholderContent } from '@/components/ui/placeholder-content';
-import { CalendarOff, Save, Eraser, PlusCircle } from 'lucide-react';
+import { CalendarOff, Save, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Asignacion } from '@/lib/definitions';
+import { DocenteAsignacion } from '@/domain/entities/Docente';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { useMatriculaData } from '@/hooks/use-matricula-data';
 import { ActividadFormDialog } from '@/components/horario/actividad-form-dialog';
@@ -34,22 +34,52 @@ export default function MiHorarioPage() {
     const { toast } = useToast();
     const { allAreas } = useMatriculaData();
     
-    const [activeSelection, setActiveSelection] = useState<Asignacion | ActividadPedagogica | null>(null);
-    const [isClearing, setIsClearing] = useState(false);
+    const [activeSelection, setActiveSelection] = useState<DocenteAsignacion | ActividadPedagogica | null>(null);
     const [isActividadDialogOpen, setIsActividadDialogOpen] = useState(false);
 
-    const handleSaveChanges = () => {
-        saveHorario();
-        toast({
-            title: 'Horario Guardado',
-            description: 'Tus cambios en el horario han sido guardados con éxito.'
-        });
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSaveChanges = async () => {
+        setIsSaving(true);
+        try {
+            const success = await saveHorario();
+            if (success) {
+                toast({
+                    title: 'Horario Guardado',
+                    description: 'Tus cambios en el horario han sido guardados con éxito.'
+                });
+            } else {
+                toast({
+                    title: 'Error al guardar',
+                    description: 'No se pudo guardar el horario. Intenta nuevamente.',
+                    variant: 'destructive'
+                });
+            }
+        } finally {
+            setIsSaving(false);
+        }
     }
     
     const handleCellClick = (dia: string, horaId: string) => {
         const key = `${dia}-${horaId}`;
-        // Si el modo Limpiar está activo, pasa null. Si no, pasa la asignación activa.
-        updateHorarioCell(key, isClearing ? null : activeSelection);
+        const currentCell = horario.get(key);
+        
+        // Si no hay selección activa, no hacer nada
+        if (!activeSelection) {
+            return;
+        }
+        
+        // Toggle inteligente:
+        // - Si la celda está vacía → asignar
+        // - Si la celda tiene la MISMA asignación → eliminar (toggle)
+        // - Si la celda tiene OTRA asignación → cambiar
+        if (currentCell && currentCell.asignacionId === activeSelection.id) {
+            // Click en la misma clase → eliminar (toggle)
+            updateHorarioCell(key, null);
+        } else {
+            // Celda vacía o diferente clase → asignar/cambiar
+            updateHorarioCell(key, activeSelection);
+        }
     }
     
     const handleSelectionChange = (selectionId: string) => {
@@ -58,23 +88,15 @@ export default function MiHorarioPage() {
             return;
         }
 
-        const allOptions: (Asignacion | ActividadPedagogica)[] = [...asignacionesConArea, ...actividadesPedagogicas];
+        const allOptions = [...asignacionesConArea, ...actividadesPedagogicas];
         const selected = allOptions.find(a => a.id === selectionId);
 
         setActiveSelection(selected || null);
-        setIsClearing(false);
     }
 
     const handleSaveActividad = (nombre: string) => {
         addActividadPersonalizada(nombre);
         toast({ title: "Actividad añadida", description: `"${nombre}" ahora está disponible en tu lista.`});
-    }
-
-    const toggleClearMode = () => {
-        setIsClearing(prev => !prev);
-        if (!isClearing) { // Si se está activando el modo limpiar
-            setActiveSelection(null);
-        }
     }
     
     const asignacionesConNombreArea = useMemo(() => {
@@ -105,15 +127,17 @@ export default function MiHorarioPage() {
                         Mi Horario
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Selecciona una clase o actividad y luego haz clic en el horario para asignarla.
+                        Selecciona una clase y haz clic en el horario para asignarla. Click nuevamente en la misma celda para eliminarla.
                     </p>
                 </div>
                  {hasChanges && (
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={discardChanges}>Descartar</Button>
-                        <Button onClick={handleSaveChanges}>
+                        <Button variant="outline" onClick={discardChanges} disabled={isSaving}>
+                            Descartar
+                        </Button>
+                        <Button onClick={handleSaveChanges} disabled={isSaving}>
                             <Save className="mr-2 h-4 w-4" />
-                            Guardar Cambios
+                            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                         </Button>
                     </div>
                 )}
@@ -122,47 +146,50 @@ export default function MiHorarioPage() {
             {asignacionesConArea.length > 0 || actividadesPedagogicas.length > 0 ? (
                 <div className="space-y-8">
                     <Card>
-                         <CardContent className="p-4 flex flex-col md:flex-row items-center gap-4">
-                            <Select 
-                                value={activeSelection?.id || ''} 
-                                onValueChange={handleSelectionChange}
-                            >
-                                <SelectTrigger className="w-full md:w-[400px]">
-                                    <SelectValue placeholder="Selecciona una clase o actividad..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>Mis Clases</SelectLabel>
-                                        {asignacionesConNombreArea.map(asig => (
-                                            <SelectItem key={asig.id} value={asig.id}>
-                                                {asig.areaNombre} ({asig.grado} - {asig.seccion.replace('Sección ','')})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                    <SelectGroup>
-                                        <SelectLabel>Otras Actividades</SelectLabel>
-                                        {actividadesPedagogicas.map(act => (
-                                            <SelectItem key={act.id} value={act.id}>{act.nombre}</SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <div className='flex items-center gap-2'>
-                                <Button 
-                                    variant={isClearing ? 'destructive' : 'outline'}
-                                    onClick={toggleClearMode}
-                                >
-                                    <Eraser className="mr-2 h-4 w-4" />
-                                    {isClearing ? 'Modo Limpiar Activado' : 'Limpiar Celda'}
-                                </Button>
+                         <CardContent className="p-6">
+                            <div className="flex items-end gap-3">
+                                {/* Selector de clase/actividad */}
+                                <div className="flex-1 space-y-2">
+                                    <label className="text-sm font-medium">
+                                        Selecciona una clase o actividad
+                                    </label>
+                                    <Select 
+                                        value={activeSelection?.id ?? ''} 
+                                        onValueChange={handleSelectionChange}
+                                    >
+                                        <SelectTrigger className="w-full h-10">
+                                            <SelectValue placeholder="Elige qué asignar al horario..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectLabel>Mis Clases</SelectLabel>
+                                                {asignacionesConNombreArea.map(asig => (
+                                                    <SelectItem key={asig.id ?? ''} value={asig.id ?? ''}>
+                                                        {asig.areaNombre} ({asig.grado} - {asig.seccion.replace('Sección ','')})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                            {actividadesPedagogicas.length > 0 && (
+                                                <SelectGroup>
+                                                    <SelectLabel>Otras Actividades</SelectLabel>
+                                                    {actividadesPedagogicas.map(act => (
+                                                        <SelectItem key={act.id} value={act.id}>{act.nombre}</SelectItem>
+                                                    ))}
+                                                </SelectGroup>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                
+                                {/* Botón añadir actividad */}
                                 <ActividadFormDialog
                                     open={isActividadDialogOpen}
                                     onOpenChange={setIsActividadDialogOpen}
                                     onSave={handleSaveActividad}
                                 >
-                                    <Button variant="outline">
+                                    <Button variant="outline" className="h-10">
                                         <PlusCircle className="mr-2 h-4 w-4"/>
-                                        Añadir Otro
+                                        Añadir Otra
                                     </Button>
                                 </ActividadFormDialog>
                             </div>

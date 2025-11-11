@@ -66,6 +66,9 @@ export async function POST(request: Request) {
 
     const privileged = hasPrivilegedAccess(user.rol);
     let docenteNombreCompleto: string | null = null;
+    
+    // Detectar si es competencias transversales
+    const esCompetenciasTransversales = areaId === 't-primaria' || areaId === 't-secundaria';
 
     if (!privileged) {
       if (!user.personalId) {
@@ -103,14 +106,35 @@ export async function POST(request: Request) {
         };
       });
 
-      const hasAssignment = normalizedAssignments.some((assignment) => {
+      // Verificar si tiene asignación directa al área
+      const hasDirectAssignment = normalizedAssignments.some((assignment) => {
         const gradeMatch = assignment.grado === grado;
         const sectionMatch = assignment.seccion === seccion;
         const areaMatch = assignment.areaId === areaId;
         return gradeMatch && sectionMatch && areaMatch;
       });
+      
+      // Si es competencias transversales, verificar si es tutor de la sección
+      let hasTutorAccess = false;
+      if (esCompetenciasTransversales) {
+        const { data: tutorAssignments, error: tutorError } = await supabaseAdmin
+          .from("asignaciones_docentes")
+          .select("rol, grados_secciones (grado, seccion)")
+          .eq("personal_id", user.personalId)
+          .eq("activo", true)
+          .eq("rol", "Docente y Tutor");
+        
+        if (!tutorError && tutorAssignments) {
+          hasTutorAccess = tutorAssignments.some((assignment) => {
+            const group = Array.isArray(assignment.grados_secciones)
+              ? assignment.grados_secciones[0]
+              : assignment.grados_secciones;
+            return group?.grado === grado && group?.seccion === seccion;
+          });
+        }
+      }
 
-      if (!hasAssignment) {
+      if (!hasDirectAssignment && !hasTutorAccess) {
         return NextResponse.json(
           { message: "No tienes asignaciones para la sección o área solicitada" },
           { status: 403 },
@@ -147,16 +171,24 @@ export async function POST(request: Request) {
         .order("apellido_paterno", { ascending: true })
         .order("apellido_materno", { ascending: true })
         .order("nombres", { ascending: true }),
-      supabaseAdmin
-        .from("areas_curriculares")
-        .select("nombre")
-        .eq("id", areaId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("competencias")
-        .select("id, nombre")
-        .eq("area_id", areaId)
-        .order("orden", { ascending: true }),
+      esCompetenciasTransversales
+        ? Promise.resolve({ data: { nombre: 'Competencias Transversales' }, error: null })
+        : supabaseAdmin
+            .from("areas_curriculares")
+            .select("nombre")
+            .eq("id", areaId)
+            .maybeSingle(),
+      esCompetenciasTransversales
+        ? supabaseAdmin
+            .from("competencias")
+            .select("id, nombre")
+            .eq("es_transversal", true)
+            .order("orden", { ascending: true })
+        : supabaseAdmin
+            .from("competencias")
+            .select("id, nombre")
+            .eq("area_id", areaId)
+            .order("orden", { ascending: true }),
     ]);
 
     const { data: students, error: studentsError } = studentsResponse;

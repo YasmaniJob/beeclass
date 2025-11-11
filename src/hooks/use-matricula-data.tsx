@@ -14,7 +14,7 @@ import { initialHistorialAsistencia } from '@/lib/historial-asistencia-data';
 import { initialIncidentesComunes } from '@/lib/incidentes-comunes-data';
 import { useMatriculaSupabaseHibrida } from '@/infrastructure/hooks/useMatriculaSupabaseHibrida';
 import { isSupabaseConfigured } from '@/infrastructure/adapters/supabase/config';
-import { syncDocentesAsignaciones } from '@/infrastructure/services/asignaciones-supabase';
+import { syncDocentesAsignacionesOptimized } from '@/infrastructure/services/asignaciones-supabase-optimized';
 import { gradosSeccionesRepository } from '@/infrastructure/repositories/supabase/SupabaseGradosSeccionesRepository';
 
 // ⚠️ NOTA: Este hook ahora usa Supabase internamente
@@ -292,16 +292,14 @@ export function MatriculaDataProvider({ children }: { children: ReactNode }) {
       return true;
     }
 
-    const success = await syncDocentesAsignaciones(newDocentes);
+    const success = await syncDocentesAsignacionesOptimized(newDocentes);
     if (success) {
-        // Refrescar datos desde Supabase para asegurar consistencia
+        // Refrescar solo personal (las asignaciones ya están actualizadas)
         await refreshPersonal();
-        await refreshGradosSecciones();
-        await refreshAreasCurriculares();
         // loadData() se ejecutará automáticamente por los useEffect cuando cambien los datos de Supabase
     }
     return success;
-  }, [refreshPersonal, refreshGradosSecciones, refreshAreasCurriculares]);
+  }, [refreshPersonal]);
 
   const setGradosAsync = useCallback(async (newGrados: string[]): Promise<boolean> => {
     if (!isSupabaseConfigured) {

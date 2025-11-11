@@ -86,8 +86,22 @@ export function useHorario() {
         const allOptions: (DocenteAsignacion | ActividadPedagogica)[] = [...asignacionesConArea, ...actividadesPedagogicas];
 
         for (const key in horarioData) {
-            const id = horarioData[key];
-            const item = allOptions.find(opt => opt.id === id);
+            const value = horarioData[key];
+            
+            // Verificar si es una actividad personalizada con formato "activity:{nombre}"
+            if (value.startsWith('activity:')) {
+                const activityName = value.substring(9);
+                newHorario.set(key, {
+                    label: activityName,
+                    subLabel: null,
+                    color: actividadColor,
+                    asignacionId: value, // Mantener el formato "activity:{nombre}"
+                });
+                continue;
+            }
+            
+            // Buscar en las opciones disponibles
+            const item = allOptions.find(opt => opt.id === value);
 
             if (item) {
                 if ('type' in item && item.type === 'activity') { // Es ActividadPedagogica
@@ -95,7 +109,7 @@ export function useHorario() {
                         label: item.nombre,
                         subLabel: null,
                         color: actividadColor,
-                        asignacionId: item.id,
+                        asignacionId: `activity:${item.nombre}`, // Guardar con formato "activity:{nombre}"
                     });
                 } else { // Es Asignacion
                     const asignacion = item as DocenteAsignacion;
@@ -148,7 +162,7 @@ export function useHorario() {
                     label: selection.nombre,
                     subLabel: null,
                     color: actividadColor,
-                    asignacionId: selection.id,
+                    asignacionId: `activity:${selection.nombre}`, // Usar formato "activity:{nombre}"
                 });
             } else {
                 const asignacion = selection as DocenteAsignacion;
@@ -170,8 +184,9 @@ export function useHorario() {
     }, [allAreas, areaColorMap]);
 
 
-    const saveHorario = useCallback(() => {
-        if (!user) return;
+    const saveHorario = useCallback(async () => {
+        if (!user) return false;
+        
         const horarioToSave: Record<string, string> = {};
         horario.forEach((value, key) => {
             horarioToSave[key] = value.asignacionId;
@@ -180,11 +195,23 @@ export function useHorario() {
         const updatedResult = user.actualizar({ horario: horarioToSave });
         if (!updatedResult.isSuccess) {
             console.error('No se pudo actualizar el horario del usuario', updatedResult.error);
-            return;
+            return false;
         }
 
+        // Guardar en Supabase usando el repositorio
+        const { SupabasePersonalRepository } = await import('@/infrastructure/repositories/supabase/SupabasePersonalRepository');
+        const repository = new SupabasePersonalRepository();
+        const saveResult = await repository.save(updatedResult.value);
+        
+        if (saveResult.isFailure) {
+            console.error('Error guardando horario en Supabase:', saveResult.error);
+            return false;
+        }
+
+        // Actualizar estado local solo si se guardó exitosamente
         updateUser(updatedResult.value);
         setOriginalHorario(new Map(horario));
+        return true;
     }, [user, horario, updateUser]);
     
     const discardChanges = useCallback(() => {
