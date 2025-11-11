@@ -78,14 +78,20 @@ export async function POST(request: Request) {
         const desiredPassword = docente.numeroDocumento.trim();
         const metadata = buildMetadata(docente);
 
-        const upsertUser = async (userId: string) => {
-            const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        const upsertUser = async (userId: string, updatePassword: boolean = false) => {
+            const updateData: any = {
                 email: docente.email,
                 email_confirm: true,
-                password: desiredPassword,
                 user_metadata: metadata,
                 app_metadata: { role: docente.rol },
-            });
+            };
+
+            // Solo actualizar contraseña si se solicita explícitamente
+            if (updatePassword) {
+                updateData.password = desiredPassword;
+            }
+
+            const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, updateData);
 
             if (error) {
                 throw error;
@@ -95,7 +101,8 @@ export async function POST(request: Request) {
         if (previousEmail && previousEmail.toLowerCase() !== docente.email.toLowerCase()) {
             const previousUser = await findUserByEmail(previousEmail);
             if (previousUser) {
-                await upsertUser(previousUser.id);
+                // Cambió el email, actualizar con nueva contraseña
+                await upsertUser(previousUser.id, true);
                 return NextResponse.json({ status: 'updated' }, { status: 200 });
             }
         }
@@ -115,7 +122,8 @@ export async function POST(request: Request) {
                 if (error instanceof AuthApiError && error.message?.toLowerCase().includes('already been registered')) {
                     const user = await findUserByEmail(docente.email);
                     if (user) {
-                        await upsertUser(user.id);
+                        // Usuario ya existe, solo actualizar metadata (sin cambiar contraseña)
+                        await upsertUser(user.id, false);
                         return NextResponse.json({ status: 'updated' }, { status: 200 });
                     }
                 }
@@ -126,7 +134,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ status: 'created' }, { status: 201 });
         }
 
-        await upsertUser(existingUser.id);
+        // Usuario existe, solo actualizar metadata (sin cambiar contraseña)
+        await upsertUser(existingUser.id, false);
 
         return NextResponse.json({ status: 'updated' }, { status: 200 });
     } catch (error) {
