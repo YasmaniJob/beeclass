@@ -15,9 +15,11 @@ import { CalendarDays } from 'lucide-react';
 export function DashboardInstitucional() {
   const { stats, incidentes, isLoading } = useDashboard();
   const [currentDate, setCurrentDate] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setCurrentDate(format(new Date(), 'PPPP', { locale: es }));
+    setIsMounted(true);
   }, []);
 
   return (

@@ -92,36 +92,49 @@ const Breadcrumb = () => {
     if(rootItem && !rootItem.subItems) return null;
   }
 
+  const showBackButton = pathname.startsWith('/estudiantes/') && pathSegments.length >= 3;
+
   return (
     <nav aria-label="Breadcrumb" className="mb-6">
-      <ol className="flex items-center space-x-1.5 text-sm text-muted-foreground">
-        {breadcrumbs.map((crumb, index) => {
-          // Determinar si este breadcrumb debe ser un enlace
-          const isLast = index === breadcrumbs.length - 1;
-          const isGradoInEstudiantes = pathname.startsWith('/estudiantes') && index === 1;
-          const isGradoBreadcrumb = crumb.label.startsWith('Grado:');
-          const shouldBeLink = !isLast && !isGradoInEstudiantes && !isGradoBreadcrumb;
-          
-          return (
-            <li key={index} className="flex items-center">
-              {index > 0 && <ChevronRight className="h-4 w-4" />}
-              
-              {shouldBeLink ? (
-                  <Link
-                      href={crumb.href}
-                      className={cn('ml-1.5 hover:text-foreground')}
-                  >
-                      {crumb.label}
-                  </Link>
-              ) : (
-                  <span className={cn('ml-1.5', isLast && 'font-medium text-foreground')}>
-                      {crumb.label}
-                  </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      <div className="flex items-center justify-between">
+        <ol className="flex items-center space-x-1.5 text-sm text-muted-foreground">
+          {breadcrumbs.map((crumb, index) => {
+            // Determinar si este breadcrumb debe ser un enlace
+            const isLast = index === breadcrumbs.length - 1;
+            const isGradoInEstudiantes = pathname.startsWith('/estudiantes') && index === 1;
+            const isGradoBreadcrumb = crumb.label.startsWith('Grado:');
+            const shouldBeLink = !isLast && !isGradoInEstudiantes && !isGradoBreadcrumb;
+            
+            return (
+              <li key={index} className="flex items-center">
+                {index > 0 && <ChevronRight className="h-4 w-4" />}
+                
+                {shouldBeLink ? (
+                    <Link
+                        href={crumb.href}
+                        className={cn('ml-1.5 hover:text-foreground')}
+                    >
+                        {crumb.label}
+                    </Link>
+                ) : (
+                    <span className={cn('ml-1.5', isLast && 'font-medium text-foreground')}>
+                        {crumb.label}
+                    </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        
+        {showBackButton && (
+          <Link
+            href="/estudiantes"
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            <span>← Volver</span>
+          </Link>
+        )}
+      </div>
     </nav>
   );
 };

@@ -465,8 +465,18 @@ export function MatriculaSupabaseHibridaProvider({
     }
   }, [refreshPersonal, toast]);
 
-  const deletePersonal = useCallback(async (numeroDocumento: string): Promise<boolean> => {
+  const deletePersonal = useCallback(async (numeroDocumento: string, currentUserNumeroDocumento?: string): Promise<boolean> => {
     try {
+      // Validar que no se elimine a sí mismo
+      if (currentUserNumeroDocumento && numeroDocumento === currentUserNumeroDocumento) {
+        toast({
+          variant: 'destructive',
+          title: 'Operación no permitida',
+          description: 'No puedes eliminarte a ti mismo del sistema.'
+        });
+        return false;
+      }
+
       const result = await personalRepo.delete(numeroDocumento);
       if (result.isSuccess) {
         // Invalidar caché antes de refrescar
@@ -480,7 +490,7 @@ export function MatriculaSupabaseHibridaProvider({
         
         toast({
           title: 'Éxito',
-          description: 'Personal eliminado correctamente'
+          description: 'Personal eliminado permanentemente del sistema'
         });
         return true;
       } else {

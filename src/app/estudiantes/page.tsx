@@ -255,11 +255,28 @@ export default function EstudiantesPage() {
   const isAdmin = user?.rol === 'Admin';
   const { isMobile, isMounted } = useIsMobile();
 
-  const [activeTab, setActiveTab] = useState(grados[0] || '');
+  // Inicializar con el último grado visitado o el primero disponible
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const lastVisited = localStorage.getItem('lastVisitedGrado');
+      if (lastVisited && grados.includes(lastVisited)) {
+        return lastVisited;
+      }
+    }
+    return grados[0] || '';
+  });
 
   // Update active tab if grados list changes
   useEffect(() => {
     if (grados.length > 0 && !grados.includes(activeTab)) {
+      // Intentar recuperar el último visitado
+      if (typeof window !== 'undefined') {
+        const lastVisited = localStorage.getItem('lastVisitedGrado');
+        if (lastVisited && grados.includes(lastVisited)) {
+          setActiveTab(lastVisited);
+          return;
+        }
+      }
       setActiveTab(grados[0]);
     } else if (grados.length === 0) {
       setActiveTab('');
@@ -268,6 +285,10 @@ export default function EstudiantesPage() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    // Guardar el grado seleccionado
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lastVisitedGrado', value);
+    }
   };
 
   const renderContent = (grado: string) => (

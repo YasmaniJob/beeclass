@@ -74,8 +74,21 @@ export function useDashboard() {
   const { allEstudiantes, isLoaded: isMatriculaLoaded } = useMatriculaData();
   const { asistencias, loading: asistenciasLoading, fetchAsistencias } = useAsistencias();
 
+  // Intentar usar caché primero
   useEffect(() => {
-    fetchAsistencias();
+    if (typeof window === 'undefined') return;
+    
+    const loadData = async () => {
+      const { getCachedDashboardStats } = await import('@/lib/cache/dashboard-cache');
+      const cached = getCachedDashboardStats();
+      
+      // Si no hay caché válido, cargar datos
+      if (!cached) {
+        fetchAsistencias();
+      }
+    };
+    
+    loadData();
   }, [fetchAsistencias]);
 
   const asistenciaHoy = useMemo(() => {
@@ -126,13 +139,22 @@ export function useDashboard() {
   const enRiesgoCount = useMemo(() => estudiantesEnRiesgo.length, [estudiantesEnRiesgo]);
 
   const stats = useMemo<DashboardStats>(() => {
-    return {
+    const newStats = {
       presentesHoy: asistenciaHoy.presentes,
       faltasHoy: asistenciaHoy.faltas,
       tardanzasHoy: asistenciaHoy.tardanzas,
       enRiesgoTotal: enRiesgoCount,
     };
-  }, [asistenciaHoy, enRiesgoCount]);
+    
+    // Guardar en caché
+    if (typeof window !== 'undefined' && !isLoading) {
+      import('@/lib/cache/dashboard-cache').then(({ cacheDashboardStats }) => {
+        cacheDashboardStats(newStats);
+      });
+    }
+    
+    return newStats;
+  }, [asistenciaHoy, enRiesgoCount, isLoading]);
 
   return {
     stats,

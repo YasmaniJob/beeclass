@@ -2,8 +2,8 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Estudiante } from '@/lib/definitions';
 import { Card, CardContent } from '@/components/ui/card';
 import { EstudiantesTable } from '@/components/estudiantes/estudiantes-table';
@@ -13,7 +13,7 @@ import { ImportarAlumnosDialog } from '@/components/estudiantes/importar-alumnos
 import { useToast } from '@/hooks/use-toast';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Sheet as ExcelIcon } from 'lucide-react';
+import { Download, FileText, Sheet as ExcelIcon, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -22,10 +22,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useMatriculaData } from '@/hooks/use-matricula-data';
 import { useSupabaseData } from '@/hooks/use-supabase-data';
 import { toEstudianteEntity } from '@/domain/mappers/entity-builders';
 import { TipoDocumento } from '@/domain/entities/Estudiante';
+import Link from 'next/link';
 
 export type EstudianteFilters = {
     estado: string[];
@@ -33,6 +41,7 @@ export type EstudianteFilters = {
 
 export default function SeccionDetailPage() {
     const params = useParams<{ grado: string; seccion: string }>();
+    const router = useRouter();
     const { toast } = useToast();
     const { user } = useCurrentUser();
     const isAdmin = user?.rol === 'Admin';
@@ -40,8 +49,32 @@ export default function SeccionDetailPage() {
     const grado = decodeURIComponent(params.grado);
     const seccion = decodeURIComponent(params.seccion);
 
-    const { estudiantesPorSeccion } = useMatriculaData();
+    const { estudiantesPorSeccion, grados, seccionesPorGrado } = useMatriculaData();
     const { addEstudiante, updateEstudiante, deleteEstudiante, refreshEstudiantes } = useSupabaseData();
+
+    // Guardar el último grado visitado
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('lastVisitedGrado', grado);
+        }
+    }, [grado]);
+
+    // Obtener solo las secciones del grado actual
+    const seccionesDelGrado = useMemo(() => {
+        return seccionesPorGrado[grado] || [];
+    }, [grado, seccionesPorGrado]);
+
+    const handleGradoChange = (newGrado: string) => {
+        // Navegar a la primera sección del nuevo grado
+        const primeraSeccion = seccionesPorGrado[newGrado]?.[0];
+        if (primeraSeccion) {
+            router.push(`/estudiantes/${encodeURIComponent(newGrado)}/${encodeURIComponent(primeraSeccion)}`);
+        }
+    };
+
+    const handleSeccionChange = (newSeccion: string) => {
+        router.push(`/estudiantes/${encodeURIComponent(grado)}/${encodeURIComponent(newSeccion)}`);
+    };
 
     const estudiantes = useMemo(() => {
         return (estudiantesPorSeccion[grado]?.[seccion] || []).sort((a: Estudiante, b: Estudiante) => a.apellidoPaterno.localeCompare(b.apellidoPaterno));
@@ -276,11 +309,11 @@ export default function SeccionDetailPage() {
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                 <div>
+                <div>
                     <h1 className="text-3xl font-bold tracking-tight font-headline">
                         {grado} - {seccion.replace('Sección ', '')}
                     </h1>
-                     <p className="text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1">
                         {filteredEstudiantes.length} de {estudiantes.length} estudiantes en esta sección.
                     </p>
                 </div>
@@ -326,12 +359,18 @@ export default function SeccionDetailPage() {
             </div>
             
             <Card>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-b">
+                <div className="p-4 border-b">
                    <EstudiantesFiltros
                         filters={filters}
                         onFiltersChange={setFilters}
                         searchTerm={searchTerm}
                         onSearchTermChange={setSearchTerm}
+                        grados={grados}
+                        secciones={seccionesDelGrado}
+                        gradoActual={grado}
+                        seccionActual={seccion}
+                        onGradoChange={handleGradoChange}
+                        onSeccionChange={handleSeccionChange}
                     />
                 </div>
                 <CardContent className="p-0">
