@@ -6,7 +6,9 @@ import { DocenteEditable } from '@/domain/mappers/docente-editable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlaceholderContent } from '@/components/ui/placeholder-content';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Pencil, Trash2, Users } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { MoreHorizontal, Pencil, Trash2, Users, AlertTriangle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { PaginationControls } from '../ui/pagination-controls';
@@ -29,10 +31,31 @@ const ITEMS_PER_PAGE = 10;
 
 export function DocentesTable({ docentes, onEdit, onDelete }: DocentesTableProps) {
     const [currentPage, setCurrentPage] = useState(1);
+    const [deleteConfirmation, setDeleteConfirmation] = useState('');
+    const [docenteToDelete, setDocenteToDelete] = useState<DocenteEditable | null>(null);
     
     useEffect(() => {
         setCurrentPage(1);
     }, [docentes]);
+
+    const handleDeleteClick = (docente: DocenteEditable) => {
+        setDocenteToDelete(docente);
+        setDeleteConfirmation('');
+    };
+
+    const handleDeleteConfirm = () => {
+        if (docenteToDelete) {
+            onDelete(docenteToDelete.numeroDocumento);
+            setDocenteToDelete(null);
+            setDeleteConfirmation('');
+        }
+    };
+
+    const isDeleteConfirmationValid = () => {
+        if (!docenteToDelete) return false;
+        const expectedName = `${docenteToDelete.apellidoPaterno} ${docenteToDelete.apellidoMaterno}, ${docenteToDelete.nombres}`.toLowerCase().trim();
+        return deleteConfirmation.toLowerCase().trim() === expectedName;
+    };
 
     const totalPages = Math.ceil(docentes.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -119,23 +142,51 @@ export function DocentesTable({ docentes, onEdit, onDelete }: DocentesTableProps
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 Editar Datos
                                             </DropdownMenuItem>
-                                            <AlertDialog>
+                                            <AlertDialog open={docenteToDelete?.numeroDocumento === docente.numeroDocumento} onOpenChange={(open) => !open && setDocenteToDelete(null)}>
                                                 <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(docente); }} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         Eliminar
                                                     </DropdownMenuItem>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Esta acción no se puede deshacer. Se eliminará a <strong className="font-medium">{docente.nombres} {docente.apellidoPaterno}</strong> del sistema.
+                                                        <div className="flex items-center gap-2 text-destructive">
+                                                            <AlertTriangle className="h-5 w-5" />
+                                                            <AlertDialogTitle>⚠️ Eliminación Permanente</AlertDialogTitle>
+                                                        </div>
+                                                        <AlertDialogDescription className="space-y-3">
+                                                            <p>
+                                                                Esta acción <strong className="text-destructive">NO se puede deshacer</strong>. 
+                                                                Se eliminará permanentemente a:
+                                                            </p>
+                                                            <p className="font-semibold text-foreground text-base">
+                                                                {docente.apellidoPaterno} {docente.apellidoMaterno}, {docente.nombres}
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                Para confirmar, escribe el nombre completo exactamente como aparece arriba:
+                                                            </p>
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="delete-confirmation">Nombre completo</Label>
+                                                        <Input
+                                                            id="delete-confirmation"
+                                                            placeholder="Apellido Paterno Apellido Materno, Nombres"
+                                                            value={deleteConfirmation}
+                                                            onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                                            className="font-mono"
+                                                        />
+                                                    </div>
                                                     <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => onDelete(docente.numeroDocumento)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                                                        <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction 
+                                                            onClick={handleDeleteConfirm} 
+                                                            disabled={!isDeleteConfirmationValid()}
+                                                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground disabled:opacity-50"
+                                                        >
+                                                            Eliminar Permanentemente
+                                                        </AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>

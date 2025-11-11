@@ -518,14 +518,44 @@ export class SupabasePersonalRepository {
 
   async delete(numeroDocumento: string): Promise<Result<boolean, DomainError>> {
     try {
-      // Soft delete: marcar como inactivo
+      // Obtener el personal antes de eliminar para obtener su email
+      const { data: personal, error: fetchError } = await supabase
+        .from('personal')
+        .select('email')
+        .eq('numero_documento', numeroDocumento)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        return failure(new DomainError(`Error fetching personal: ${fetchError.message}`));
+      }
+
+      // Hard delete: eliminar completamente
       const { error } = await supabase
         .from('personal')
-        .update({ activo: false })
+        .delete()
         .eq('numero_documento', numeroDocumento);
 
       if (error) {
         return failure(new DomainError(`Error deleting personal: ${error.message}`));
+      }
+
+      // Intentar eliminar de Supabase Auth si tiene email
+      if (personal?.email && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        try {
+          const siteUrl = typeof window !== 'undefined' 
+            ? '' 
+            : (process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+               (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
+
+          await fetch(`${siteUrl}/api/personal/auth-delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: personal.email }),
+          });
+        } catch (authError) {
+          console.warn('No se pudo eliminar usuario de Auth:', authError);
+          // No fallar la operación si solo falla Auth
+        }
       }
 
       return success(true);

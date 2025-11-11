@@ -469,12 +469,15 @@ export function MatriculaSupabaseHibridaProvider({
     try {
       const result = await personalRepo.delete(numeroDocumento);
       if (result.isSuccess) {
-        // Invalidar caché
+        // Invalidar caché antes de refrescar
         if (typeof window !== 'undefined') {
           const { clearPersonalCache } = await import('@/lib/cache/personal-cache');
           clearPersonalCache();
         }
+        
+        // Forzar refresh desde Supabase
         await refreshPersonal(true);
+        
         toast({
           title: 'Éxito',
           description: 'Personal eliminado correctamente'
