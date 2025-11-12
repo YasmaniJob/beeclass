@@ -155,16 +155,43 @@ export default function SeccionDetailPage() {
             return;
         }
 
-        const results = await Promise.all(entities.map(entity => addEstudiante(entity)));
+        // Procesar en lotes para mejor rendimiento
+        const BATCH_SIZE = 5;
+        const results: boolean[] = [];
+        let processed = 0;
+
+        // Toast inicial
+        toast({
+            title: 'Iniciando importación...',
+            description: `Preparando ${entities.length} estudiante(s)`,
+        });
+
+        for (let i = 0; i < entities.length; i += BATCH_SIZE) {
+            const batch = entities.slice(i, i + BATCH_SIZE);
+            const batchResults = await Promise.all(batch.map(entity => addEstudiante(entity)));
+            results.push(...batchResults);
+            processed += batch.length;
+
+            // Actualizar progreso solo cada lote
+            if (processed < entities.length) {
+                const currentStudent = entities[Math.min(processed, entities.length - 1)]?.nombres || '';
+                toast({
+                    title: 'Importando estudiantes...',
+                    description: `${processed} de ${entities.length} procesados`,
+                });
+            }
+        }
+
         const successCount = results.filter(Boolean).length;
 
         if (successCount > 0) {
             await refreshEstudiantes();
         }
 
+        // Toast final
         toast({
-            title: 'Importación masiva completa',
-            description: `Se han añadido ${successCount} nuevo(s) estudiante(s).`,
+            title: 'Importación completada',
+            description: `Se han añadido ${successCount} de ${entities.length} estudiante(s).`,
         });
     };
     

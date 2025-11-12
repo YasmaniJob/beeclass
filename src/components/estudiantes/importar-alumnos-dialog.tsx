@@ -137,7 +137,7 @@ export function ImportarAlumnosDialog({
         }
     };
     
-    const handleConfirmImport = () => {
+    const handleConfirmImport = async () => {
         const existingDocNumbers = new Set(allEstudiantes.map(e => e.numeroDocumento));
         const nuevosEstudiantes = processedEstudiantes.filter(
             imp => !existingDocNumbers.has(imp.numeroDocumento)
@@ -151,16 +151,21 @@ export function ImportarAlumnosDialog({
                 grado,
                 seccion,
             }));
+            
+            // Cerrar el diálogo antes de iniciar la importación
+            setIsOpen(false);
+            resetState();
+            
+            // Llamar a onSave que ahora manejará el progreso
             onSave(estudiantesConDestino);
+        } else {
+            toast({
+                title: "Sin cambios",
+                description: `Todos los estudiantes ya están registrados. Se omitieron ${skippedCount} duplicado(s).`,
+            });
+            setIsOpen(false);
+            resetState();
         }
-        
-        toast({
-            title: "Importación Completada",
-            description: `${nuevosEstudiantes.length} estudiante(s) nuevo(s) importado(s). Se omitieron ${skippedCount} duplicado(s).`,
-        });
-
-        setIsOpen(false);
-        resetState();
     };
 
     return (

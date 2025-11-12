@@ -63,27 +63,36 @@ export default function DocentesPage() {
 
     const handleMassSave = async (nuevosDocentes: Docente[]) => {
         try {
-            // Procesar en lotes de 5 para evitar sobrecarga
             const BATCH_SIZE = 5;
             let processed = 0;
+            const results: boolean[] = [];
+            
+            // Toast inicial
+            toast({ 
+                title: 'Iniciando importación...', 
+                description: `Preparando ${nuevosDocentes.length} miembro(s) del personal` 
+            });
             
             for (let i = 0; i < nuevosDocentes.length; i += BATCH_SIZE) {
                 const batch = nuevosDocentes.slice(i, i + BATCH_SIZE);
-                await Promise.all(batch.map(docente => addDocente(docente)));
+                const batchResults = await Promise.all(batch.map(docente => addDocente(docente)));
+                results.push(...batchResults);
                 processed += batch.length;
                 
-                // Mostrar progreso
+                // Actualizar progreso solo cada lote
                 if (processed < nuevosDocentes.length) {
                     toast({ 
-                        title: 'Importando...', 
+                        title: 'Importando personal...', 
                         description: `${processed} de ${nuevosDocentes.length} procesados` 
                     });
                 }
             }
             
+            const successCount = results.filter(Boolean).length;
+            
             toast({ 
-                title: 'Importación masiva completa', 
-                description: `Se han añadido ${nuevosDocentes.length} nuevos miembros al personal.` 
+                title: 'Importación completada', 
+                description: `Se han añadido ${successCount} de ${nuevosDocentes.length} miembros al personal.` 
             });
         } catch (error) {
             toast({ 
