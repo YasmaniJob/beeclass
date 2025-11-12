@@ -98,8 +98,13 @@ export function EvaluacionesTutorTable({
                   <TableRow>
                     <TableHead className="w-[50px] sticky left-0 bg-card z-10">N°</TableHead>
                     <TableHead className="sticky left-12 bg-card z-10 min-w-[250px]">Apellidos y Nombres</TableHead>
-                    {competencias.map(comp => (
-                        <TableHead key={comp.id} className="text-center font-bold min-w-[200px]">{comp.nombre}</TableHead>
+                    {competencias.map((comp, index) => (
+                        <TableHead key={comp.id} className="text-center font-bold min-w-[200px]">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-xs text-muted-foreground">Competencia {index + 1}</span>
+                                <span className="text-sm font-normal leading-tight">{comp.nombre}</span>
+                            </div>
+                        </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>

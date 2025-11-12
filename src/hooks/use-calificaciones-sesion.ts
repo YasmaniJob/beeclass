@@ -9,6 +9,7 @@ import { useCurrentUser } from './use-current-user';
 import { NotaCualitativa, SesionAprendizaje } from '@/lib/definitions';
 import { useToast } from './use-toast';
 import { useCurricular } from './use-curricular';
+import { TipoEvaluacion } from '@/types/evaluacion';
 
 /**
  * Hook para gestionar calificaciones de sesiones de aprendizaje
@@ -77,7 +78,7 @@ export function useCalificacionesSesion(grado: string, seccion: string, sesionId
         setChangedStudentIds(prev => new Set(prev).add(estudianteId));
     }, []);
     
-    const handleSaveChanges = useCallback(() => {
+    const handleSaveChanges = useCallback((tipoEvaluacion?: TipoEvaluacion) => {
         if (!user || !sesion || !competencia) return;
 
         changedStudentIds.forEach(estudianteId => {
@@ -92,6 +93,7 @@ export function useCalificacionesSesion(grado: string, seccion: string, sesionId
                     competenciaId: sesion.competenciaId,
                     nota,
                     sesionId: sesion.id,
+                    tipoEvaluacion: tipoEvaluacion || sesion.tipoEvaluacion || 'directa',
                 });
             }
         });

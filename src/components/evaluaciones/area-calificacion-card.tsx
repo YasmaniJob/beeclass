@@ -16,18 +16,23 @@ interface AreaCalificacionCardProps {
     totalEstudiantes: number;
     totalCalificados: number;
     isTransversal?: boolean;
+    isTutor?: boolean;
 }
 
-export function AreaCalificacionCard({ area, grado, seccion, totalEstudiantes, totalCalificados, isTransversal = false }: AreaCalificacionCardProps) {
+export function AreaCalificacionCard({ area, grado, seccion, totalEstudiantes, totalCalificados, isTransversal = false, isTutor = false }: AreaCalificacionCardProps) {
     const seccionEncoded = encodeURIComponent(seccion);
     const gradoEncoded = encodeURIComponent(grado);
     const areaIdEncoded = encodeURIComponent(area.id);
 
+    // Si es transversal y es tutor, va al consolidado
+    // Si es transversal y NO es tutor, va a evaluar normalmente
     const href = isTransversal 
-        ? `/evaluaciones/transversal/${gradoEncoded}/${seccionEncoded}`
+        ? (isTutor 
+            ? `/evaluaciones/transversal/${gradoEncoded}/${seccionEncoded}` 
+            : `/evaluaciones/${gradoEncoded}/${seccionEncoded}/${areaIdEncoded}`)
         : `/evaluaciones/${gradoEncoded}/${seccionEncoded}/${areaIdEncoded}`;
     
-    const buttonText = isTransversal ? 'Ver Consolidado' : 'Evaluar';
+    const buttonText = (isTransversal && isTutor) ? 'Ver Consolidado' : 'Evaluar';
 
     const progreso = totalEstudiantes > 0 ? (totalCalificados / totalEstudiantes) * 100 : 0;
 

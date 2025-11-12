@@ -12,7 +12,7 @@ export function useCompetencias() {
         data: Omit<Calificacion, 'id' | 'fecha'>
     ) => {
         const memoryCalificaciones = getCalificaciones();
-        const { estudianteId, docenteId, areaId, competenciaId, periodo, sesionId, nota } = data;
+        const { estudianteId, docenteId, areaId, competenciaId, periodo, sesionId, nota, tipoEvaluacion } = data;
         
         let existingIndex = -1;
 
@@ -36,6 +36,7 @@ export function useCompetencias() {
                 fecha: new Date(),
                 docenteId: docenteId, 
                 areaId: areaId,
+                tipoEvaluacion: tipoEvaluacion || memoryCalificaciones[existingIndex].tipoEvaluacion || 'directa',
             };
             memoryCalificaciones[existingIndex] = updatedCalificacion;
         } else {
@@ -44,6 +45,7 @@ export function useCompetencias() {
                 id: crypto.randomUUID(),
                 ...data,
                 fecha: new Date(),
+                tipoEvaluacion: tipoEvaluacion || 'directa',
             };
             memoryCalificaciones.push(newEntry);
         }

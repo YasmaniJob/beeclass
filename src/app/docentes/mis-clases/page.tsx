@@ -104,28 +104,22 @@ export default function MisClasesPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        {/* Mostrar competencias transversales si tiene áreas asignadas O es tutor */}
-                                        {(asig.areasAsignadas.length > 0 || esTutor) && areaTransversal && areaTransversal.competencias.map(competencia => {
-                                            // Crear un área virtual para cada competencia transversal
-                                            const areaCompetencia: AreaCurricular = {
-                                                ...areaTransversal,
-                                                id: `${areaTransversal.id}-${competencia.id}`,
-                                                nombre: competencia.nombre,
-                                                competencias: [competencia]
-                                            };
-                                            
-                                            return (
-                                                <AreaCalificacionCard
-                                                    key={`transversal-${competencia.id}`}
-                                                    area={areaCompetencia}
-                                                    grado={asig.grado}
-                                                    seccion={asig.seccion}
-                                                    totalEstudiantes={asig.totalEstudiantes}
-                                                    totalCalificados={new Set((calificacionesPorArea[areaTransversal.id]?.calif || []).map(c => c.estudianteId)).size}
-                                                    isTransversal
-                                                />
-                                            );
-                                        })}
+                                        {/* Mostrar competencias transversales agrupadas si tiene áreas asignadas O es tutor */}
+                                        {(asig.areasAsignadas.length > 0 || esTutor) && areaTransversal && areaTransversal.competencias.length > 0 && (
+                                            <AreaCalificacionCard
+                                                key={`transversal-${areaTransversal.id}`}
+                                                area={{
+                                                    ...areaTransversal,
+                                                    nombre: 'Áreas Transversales'
+                                                }}
+                                                grado={asig.grado}
+                                                seccion={asig.seccion}
+                                                totalEstudiantes={asig.totalEstudiantes}
+                                                totalCalificados={new Set((calificacionesPorArea[areaTransversal.id]?.calif || []).map(c => c.estudianteId)).size}
+                                                isTransversal
+                                                isTutor={esTutor}
+                                            />
+                                        )}
                                         {asig.areasAsignadas.map(area => {
                                             const totalCalificados = new Set((calificacionesPorArea[area.id]?.calif || []).map(c => c.estudianteId)).size;
                                             return (

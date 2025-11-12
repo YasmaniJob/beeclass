@@ -8,7 +8,7 @@
  */
 
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useCalificacionesSesion } from '@/hooks/use-calificaciones-sesion';
@@ -33,9 +33,6 @@ export default function CalificarSesionPage() {
     const areaId = decodeURIComponent(params.areaId);
     const sesionId = decodeURIComponent(params.sesionId);
     
-    // Estado para el tipo de evaluación
-    const [tipoEvaluacion, setTipoEvaluacion] = useState<TipoEvaluacion>('directa');
-    
     const { 
         sesion, 
         competencia, 
@@ -46,6 +43,16 @@ export default function CalificarSesionPage() {
         handleSaveChanges,
         changedStudentIds
     } = useCalificacionesSesion(grado, seccion, sesionId);
+    
+    // Estado para el tipo de evaluación - inicializar desde la sesión
+    const [tipoEvaluacion, setTipoEvaluacion] = useState<TipoEvaluacion>('directa');
+    
+    // Actualizar el tipo de evaluación cuando se carga la sesión
+    useEffect(() => {
+        if (sesion?.tipoEvaluacion) {
+            setTipoEvaluacion(sesion.tipoEvaluacion);
+        }
+    }, [sesion]);
 
     // Calcular estadísticas por nota
     const estadisticas = useMemo(() => {
@@ -218,7 +225,7 @@ export default function CalificarSesionPage() {
 
             {changedStudentIds.size > 0 && (
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
-                    <Button size="lg" onClick={handleSaveChanges} className="shadow-lg">
+                    <Button size="lg" onClick={() => handleSaveChanges(tipoEvaluacion)} className="shadow-lg">
                         <Save className="mr-2 h-5 w-5" />
                         Guardar Cambios
                         <Badge variant="secondary" className="ml-2">{changedStudentIds.size}</Badge>

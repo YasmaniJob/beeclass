@@ -144,6 +144,9 @@ export const AreaCurricularSchema = z.object({
 export type AreaCurricular = z.infer<typeof AreaCurricularSchema>;
 
 
+export const TipoEvaluacionEnum = z.enum(['directa', 'lista-cotejo', 'rubrica']);
+export type TipoEvaluacion = z.infer<typeof TipoEvaluacionEnum>;
+
 export const SesionAprendizajeSchema = z.object({
   id: z.string(),
   areaId: z.string(),
@@ -153,6 +156,7 @@ export const SesionAprendizajeSchema = z.object({
   competenciaId: z.string(),
   capacidades: z.array(z.string()).optional(),
   fecha: z.date(),
+  tipoEvaluacion: TipoEvaluacionEnum.default('directa'),
 });
 export type SesionAprendizaje = z.infer<typeof SesionAprendizajeSchema>;
 
@@ -170,6 +174,7 @@ export const CalificacionSchema = z.object({
   fecha: z.date(),
   nota: NotaCualitativaEnum,
   sesionId: z.string().optional(),
+  tipoEvaluacion: TipoEvaluacionEnum.default('directa'),
 });
 export type Calificacion = z.infer<typeof CalificacionSchema>;
 

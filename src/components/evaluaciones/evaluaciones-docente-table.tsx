@@ -103,8 +103,18 @@ export function EvaluacionesDocenteTable({ calificaciones, onSave, estudiantes }
               <TableRow>
                 <TableHead className="w-[50px]">N°</TableHead>
                 <TableHead>Apellidos y Nombres</TableHead>
-                <TableHead className="text-center min-w-[200px]">Gestiona su aprendizaje</TableHead>
-                <TableHead className="text-center min-w-[200px]">Se desenvuelve en entornos virtuales</TableHead>
+                <TableHead className="text-center min-w-[200px]">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Competencia 1</span>
+                    <span className="text-sm font-normal leading-tight">Gestiona su aprendizaje de manera autónoma</span>
+                  </div>
+                </TableHead>
+                <TableHead className="text-center min-w-[200px]">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Competencia 2</span>
+                    <span className="text-sm font-normal leading-tight">Se desenvuelve en entornos virtuales generados por las TIC</span>
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

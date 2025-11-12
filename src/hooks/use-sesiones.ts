@@ -4,6 +4,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { SesionAprendizaje } from '@/lib/definitions';
 import { useMatriculaData } from './use-matricula-data';
+import { TipoEvaluacion } from '@/types/evaluacion';
 
 export function useSesiones() {
     const { sesiones: allSesiones, getSesiones, setSesiones } = useMatriculaData();
@@ -34,7 +35,8 @@ export function useSesiones() {
         areaId: string, 
         titulo: string, 
         competenciaId: string, 
-        capacidades?: string[]
+        capacidades?: string[],
+        tipoEvaluacion: TipoEvaluacion = 'directa'
     ): SesionAprendizaje => {
         const memorySesiones = getSesiones();
         const newSesion: SesionAprendizaje = {
@@ -46,6 +48,7 @@ export function useSesiones() {
             competenciaId,
             capacidades,
             fecha: new Date(),
+            tipoEvaluacion,
         };
         setSesiones([...memorySesiones, newSesion]);
         return newSesion;

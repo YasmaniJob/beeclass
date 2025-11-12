@@ -16,6 +16,8 @@ import { ArrowLeft, ArrowRight, FileText, Search } from 'lucide-react';
 import { AreaCurricular, SesionAprendizaje } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { EvaluationTypeSelector } from './evaluation-type-selector';
+import { TipoEvaluacion } from '@/types/evaluacion';
 
 type ViewMode = 'create' | 'all';
 
@@ -26,7 +28,7 @@ interface SesionesSheetProps {
     grado: string;
     seccion: string;
     sesiones: SesionAprendizaje[];
-    onCreateSesion: (titulo: string, competenciaId: string, capacidades?: string[]) => void;
+    onCreateSesion: (titulo: string, competenciaId: string, capacidades?: string[], tipoEvaluacion?: TipoEvaluacion) => void;
     calificacionesPorSesion?: Map<string, { calificados: number; total: number }>;
 }
 
@@ -45,6 +47,7 @@ export function SesionesSheet({
     const [titulo, setTitulo] = useState('');
     const [competenciaId, setCompetenciaId] = useState('');
     const [capacidadesSeleccionadas, setCapacidadesSeleccionadas] = useState<string[]>([]);
+    const [tipoEvaluacion, setTipoEvaluacion] = useState<TipoEvaluacion>('directa');
     const [searchQuery, setSearchQuery] = useState('');
 
     // Sesiones recientes (últimas 5)
@@ -88,11 +91,12 @@ export function SesionesSheet({
 
     const handleCrearYCalificar = () => {
         if (!titulo.trim() || !competenciaId) return;
-        onCreateSesion(titulo, competenciaId, capacidadesSeleccionadas.length > 0 ? capacidadesSeleccionadas : undefined);
+        onCreateSesion(titulo, competenciaId, capacidadesSeleccionadas.length > 0 ? capacidadesSeleccionadas : undefined, tipoEvaluacion);
         // Limpiar formulario
         setTitulo('');
         setCompetenciaId('');
         setCapacidadesSeleccionadas([]);
+        setTipoEvaluacion('directa');
     };
 
     const handleCalificarSesion = (sesionId: string) => {
@@ -164,6 +168,13 @@ export function SesionesSheet({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <EvaluationTypeSelector
+                                        selectedType={tipoEvaluacion}
+                                        onTypeChange={setTipoEvaluacion}
+                                    />
                                 </div>
 
                                 {competenciaSeleccionada && competenciaSeleccionada.capacidades && competenciaSeleccionada.capacidades.length > 0 && (

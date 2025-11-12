@@ -4,8 +4,8 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useMatriculaData } from '@/hooks/use-matricula-data';
 import { PlaceholderContent } from '@/components/ui/placeholder-content';
-import { BookDashed, Save, Plus, AlertCircle } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
+import { BookDashed, Save, Plus } from 'lucide-react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useCalificaciones } from '@/hooks/use-calificaciones';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -17,18 +17,13 @@ import { SesionesSheet } from '@/components/evaluaciones/sesiones-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useEvaluacionConfig } from '@/hooks/use-evaluacion-config';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { NotaBadge } from '@/components/shared/nota-badge';
-import { Competencia, Estudiante, Calificacion, SesionAprendizaje } from '@/lib/definitions';
+import { Competencia, Estudiante, Calificacion, SesionAprendizaje, NotaCualitativa } from '@/lib/definitions';
 import { CalificacionesDesgloseSheet } from '@/components/evaluaciones/calificaciones-desglose-sheet';
 import { EvaluacionesStats } from '@/components/evaluaciones/evaluaciones-stats';
-import { AlertaNotasFaltantes } from '@/components/evaluaciones/alerta-notas-faltantes';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { useCompetencias } from '@/hooks/use-competencias';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { NotaSelector } from '@/components/shared/nota-selector';
 
 type FilterType = 'todos' | 'completos' | 'incompletos';
 
@@ -45,7 +40,12 @@ export default function LibretaDeNotasPage() {
     
     const [periodoSeleccionado, setPeriodoSeleccionado] = useState('1');
     const [filter, setFilter] = useState<FilterType>('todos');
+    const [notasEditadas, setNotasEditadas] = useState<Map<string, NotaCualitativa>>(new Map());
+    const [estudiantesModificados, setEstudiantesModificados] = useState<Set<string>>(new Set());
+    
     const { addSesion } = useSesiones();
+    const { saveCalificacion } = useCompetencias();
+    const { user } = useCurrentUser();
 
     const {
         estudiantesConPromedios,
@@ -89,8 +89,13 @@ export default function LibretaDeNotasPage() {
         return areas.find(a => a.id === areaId);
     }, [areaId, areas]);
 
-    const handleSaveSesion = (titulo: string, competenciaId: string, capacidades?: string[]) => {
-        const newSesion = addSesion(grado, seccion, areaId, titulo, competenciaId, capacidades);
+    // Detectar si es área de competencias transversales
+    const esCompetenciasTransversales = useMemo(() => {
+        return area?.nombre === 'Competencias Transversales' || areaId.includes('transversal');
+    }, [area, areaId]);
+
+    const handleSaveSesion = (titulo: string, competenciaId: string, capacidades?: string[], tipoEvaluacion?: 'directa' | 'lista-cotejo' | 'rubrica') => {
+        const newSesion = addSesion(grado, seccion, areaId, titulo, competenciaId, capacidades, tipoEvaluacion);
         toast({
             title: 'Sesión Creada',
             description: `La sesión "${titulo}" ha sido creada con éxito.`,
@@ -137,6 +142,50 @@ export default function LibretaDeNotasPage() {
             sesiones: sesiones,
         });
     }
+
+    const handleNotaChange = useCallback((estudianteId: string, competenciaId: string, nota: NotaCualitativa) => {
+        const key = `${estudianteId}-${competenciaId}`;
+        setNotasEditadas(prev => new Map(prev).set(key, nota));
+        setEstudiantesModificados(prev => new Set(prev).add(estudianteId));
+    }, []);
+
+    const handleGuardarCambios = useCallback(() => {
+        if (!user || !area) return;
+
+        let cambiosGuardados = 0;
+        notasEditadas.forEach((nota, key) => {
+            const [estudianteId, competenciaId] = key.split('-');
+            saveCalificacion({
+                estudianteId,
+                docenteId: user.numeroDocumento,
+                grado,
+                seccion,
+                areaId: area.id,
+                competenciaId,
+                nota,
+                periodo: `${evaluacionConfig.tipo} ${periodoSeleccionado}`,
+                tipoEvaluacion: 'directa',
+            });
+            cambiosGuardados++;
+        });
+
+        toast({
+            title: 'Calificaciones guardadas',
+            description: `Se han guardado ${cambiosGuardados} calificación(es) para ${estudiantesModificados.size} estudiante(s).`,
+        });
+
+        setNotasEditadas(new Map());
+        setEstudiantesModificados(new Set());
+    }, [user, area, notasEditadas, estudiantesModificados, grado, seccion, evaluacionConfig, periodoSeleccionado, saveCalificacion, toast]);
+
+    const getNotaActual = useCallback((estudianteId: string, competenciaId: string): NotaCualitativa | '-' => {
+        const key = `${estudianteId}-${competenciaId}`;
+        if (notasEditadas.has(key)) {
+            return notasEditadas.get(key)!;
+        }
+        const estudiante = estudiantesConPromedios.find(e => e.numeroDocumento === estudianteId);
+        return estudiante?.promediosPorCompetencia[competenciaId]?.nota || '-';
+    }, [notasEditadas, estudiantesConPromedios]);
 
     if (isLoading) {
          return (
@@ -209,20 +258,11 @@ export default function LibretaDeNotasPage() {
                                 <TableHead className="w-[40px] sticky left-0 bg-card z-10">N°</TableHead>
                                 <TableHead className="sticky left-10 bg-card z-10 min-w-[200px]">Apellidos y Nombres</TableHead>
                                 {area.competencias.map((c, index) => (
-                                    <TableHead key={c.id} className="text-center min-w-[120px] border-l">
-                                         <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="ghost" className="font-bold">C{index + 1}</Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-md">
-                                                <DialogHeader>
-                                                    <DialogTitle>Competencia {index + 1}</DialogTitle>
-                                                    <DialogDescription>
-                                                        {c.nombre}
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                            </DialogContent>
-                                        </Dialog>
+                                    <TableHead key={c.id} className="text-center min-w-[200px] border-l">
+                                        <div className="flex flex-col gap-1 py-2">
+                                            <span className="text-xs text-muted-foreground font-normal">Competencia {index + 1}</span>
+                                            <span className="text-sm font-semibold leading-tight">{c.nombre}</span>
+                                        </div>
                                     </TableHead>
                                 ))}
                             </TableRow>
@@ -238,18 +278,28 @@ export default function LibretaDeNotasPage() {
                                     </TableCell>
                                     {area.competencias.map(c => {
                                         const promedio = estudiante.promediosPorCompetencia[c.id];
+                                        const notaActual = getNotaActual(estudiante.numeroDocumento, c.id);
+                                        const fueModificado = notasEditadas.has(`${estudiante.numeroDocumento}-${c.id}`);
+                                        
                                         return (
-                                             <TableCell key={c.id} className="text-center border-l p-2">
-                                                <div className="relative inline-flex items-center justify-center">
-                                                    <NotaBadge
-                                                        nota={promedio.nota}
-                                                        onClick={() => handleOpenDesglose(estudiante, c)}
-                                                        clickable={promedio.nota !== '-'}
+                                             <TableCell key={c.id} className={`text-center border-l p-2 ${fueModificado ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}>
+                                                {esCompetenciasTransversales ? (
+                                                    <NotaSelector
+                                                        value={notaActual === '-' ? null : notaActual}
+                                                        onValueChange={(nota: NotaCualitativa) => handleNotaChange(estudiante.numeroDocumento, c.id, nota)}
                                                     />
-                                                    {promedio.faltanNotas > 0 && (
-                                                        <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 justify-center p-0 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-full">{promedio.faltanNotas}</Badge>
-                                                    )}
-                                                </div>
+                                                ) : (
+                                                    <div className="relative inline-flex items-center justify-center">
+                                                        <NotaBadge
+                                                            nota={promedio.nota}
+                                                            onClick={() => handleOpenDesglose(estudiante, c)}
+                                                            clickable={promedio.nota !== '-'}
+                                                        />
+                                                        {promedio.faltanNotas > 0 && (
+                                                            <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 justify-center p-0 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-full">{promedio.faltanNotas}</Badge>
+                                                        )}
+                                                    </div>
+                                                )}
                                              </TableCell>
                                         )
                                     })}
@@ -260,12 +310,12 @@ export default function LibretaDeNotasPage() {
                 </CardContent>
             </Card>
 
-            {false && ( // changedStudentIds.size > 0
+            {esCompetenciasTransversales && estudiantesModificados.size > 0 && (
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
-                    <Button size="lg" onClick={() => {}} className="shadow-lg">
+                    <Button size="lg" onClick={handleGuardarCambios} className="shadow-lg">
                         <Save className="mr-2 h-5 w-5" />
                         Guardar Cambios
-                        <Badge variant="secondary" className="ml-2">{0}</Badge>
+                        <Badge variant="secondary" className="ml-2">{estudiantesModificados.size}</Badge>
                     </Button>
                 </div>
             )}
