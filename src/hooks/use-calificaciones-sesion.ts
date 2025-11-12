@@ -1,16 +1,23 @@
 
-
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMatriculaData } from './use-matricula-data';
 import { useSesiones } from './use-sesiones';
 import { useCompetencias } from './use-competencias';
 import { useCurrentUser } from './use-current-user';
-import { Estudiante, NotaCualitativa } from '@/lib/definitions';
+import { NotaCualitativa, SesionAprendizaje } from '@/lib/definitions';
 import { useToast } from './use-toast';
 import { useCurricular } from './use-curricular';
 
+/**
+ * Hook para gestionar calificaciones de sesiones de aprendizaje
+ * 
+ * Actualmente soporta: Evaluación Directa (AD, A, B, C)
+ * TODO: Extender para Lista de Cotejo y Rúbrica
+ * 
+ * Ver guía de extensión en: src/components/evaluaciones/README-TIPOS-EVALUACION.md
+ */
 export function useCalificacionesSesion(grado: string, seccion: string, sesionId: string) {
     const { allEstudiantes, isLoaded: isMatriculaLoaded } = useMatriculaData();
     const { getSesionById } = useSesiones();
@@ -20,44 +27,49 @@ export function useCalificacionesSesion(grado: string, seccion: string, sesionId
     const { areas } = useCurricular();
 
     const [isLoading, setIsLoading] = useState(true);
+    const [sesion, setSesion] = useState<SesionAprendizaje | undefined>(undefined);
+    const [competencia, setCompetencia] = useState<any>(null);
+    const [estudiantes, setEstudiantes] = useState<any[]>([]);
     const [localCalificaciones, setLocalCalificaciones] = useState<Record<string, NotaCualitativa | null>>({});
     const [changedStudentIds, setChangedStudentIds] = useState<Set<string>>(new Set());
-
-    const sesion = useMemo(() => getSesionById(sesionId), [sesionId, getSesionById]);
     
-    const competencia = useMemo(() => {
-        if (!sesion) return null;
-        const area = areas.find(a => a.id === sesion.areaId);
-        if (!area) return null;
-        return area.competencias.find(c => c.id === sesion.competenciaId) || null;
-    }, [sesion, areas]);
+    // Load all data when ready
+    useEffect(() => {
+        if (!isMatriculaLoaded || !user) {
+            return;
+        }
 
-    const estudiantes = useMemo(() => {
-        if (!isMatriculaLoaded) return [];
-        return allEstudiantes
+        const foundSesion = getSesionById(sesionId);
+        setSesion(foundSesion);
+        
+        if (!foundSesion) {
+            setIsLoading(false);
+            return;
+        }
+
+        // Find competencia
+        const area = areas.find(a => a.id === foundSesion.areaId);
+        const foundCompetencia = area?.competencias.find(c => c.id === foundSesion.competenciaId) || null;
+        setCompetencia(foundCompetencia);
+
+        // Filter estudiantes
+        const filteredEstudiantes = allEstudiantes
             .filter(e => e.grado === grado && e.seccion === seccion)
             .sort((a, b) => a.apellidoPaterno.localeCompare(b.apellidoPaterno));
-    }, [isMatriculaLoaded, allEstudiantes, grado, seccion]);
-
-    useEffect(() => {
-        if (estudiantes.length > 0 && user && sesion) {
-            setIsLoading(true);
-            const initialCalificaciones: Record<string, NotaCualitativa | null> = {};
-            
-            estudiantes.forEach(est => {
-                const calificacionExistente = allCalificaciones.find(c => 
-                    c.sesionId === sesionId && c.estudianteId === est.numeroDocumento
-                );
-                initialCalificaciones[est.numeroDocumento] = calificacionExistente?.nota || null;
-            });
-            
-            setLocalCalificaciones(initialCalificaciones);
-            setChangedStudentIds(new Set());
-            setIsLoading(false);
-        } else if (isMatriculaLoaded && user && sesion) {
-            setIsLoading(false);
-        }
-    }, [estudiantes, user, sesion, allCalificaciones, sesionId, isMatriculaLoaded, allEstudiantes]);
+        setEstudiantes(filteredEstudiantes);
+        
+        // Load calificaciones
+        const initialCalificaciones: Record<string, NotaCualitativa | null> = {};
+        filteredEstudiantes.forEach(est => {
+            const calificacionExistente = allCalificaciones.find(c => 
+                c.sesionId === sesionId && c.estudianteId === est.numeroDocumento
+            );
+            initialCalificaciones[est.numeroDocumento] = calificacionExistente?.nota || null;
+        });
+        
+        setLocalCalificaciones(initialCalificaciones);
+        setIsLoading(false);
+    }, [isMatriculaLoaded, user, sesionId, grado, seccion]);
 
 
     const handleNotaChange = useCallback((estudianteId: string, nota: NotaCualitativa) => {
@@ -87,7 +99,6 @@ export function useCalificacionesSesion(grado: string, seccion: string, sesionId
         toast({ title: 'Calificaciones guardadas', description: `Se han guardado los cambios para ${changedStudentIds.size} estudiante(s).` });
         setChangedStudentIds(new Set());
     }, [user, sesion, competencia, changedStudentIds, localCalificaciones, saveCalificacion, toast]);
-
 
     return {
         sesion,
