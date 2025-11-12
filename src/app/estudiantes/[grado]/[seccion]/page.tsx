@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, Sheet as ExcelIcon, ArrowLeft } from 'lucide-react';
+import { ImportProgressModal } from '@/components/ui/import-progress-modal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -85,6 +86,14 @@ export default function SeccionDetailPage() {
     const [isIndividualDialogOpen, setIsIndividualDialogOpen] = useState(false);
     const [isMasivaDialogOpen, setIsMasivaDialogOpen] = useState(false);
     const [editingEstudiante, setEditingEstudiante] = useState<Estudiante | null>(null);
+    
+    // Estado para el modal de progreso
+    const [importProgress, setImportProgress] = useState({
+        isOpen: false,
+        current: 0,
+        total: 0,
+        status: 'processing' as 'processing' | 'success' | 'error',
+    });
 
     const buildEstudianteEntity = (data: Omit<Estudiante, 'grado' | 'seccion'>, gradoDestino: string, seccionDestino: string) => {
         const result = toEstudianteEntity({
@@ -155,44 +164,59 @@ export default function SeccionDetailPage() {
             return;
         }
 
+        // Mostrar modal de progreso
+        setImportProgress({
+            isOpen: true,
+            current: 0,
+            total: entities.length,
+            status: 'processing',
+        });
+
         // Procesar en lotes para mejor rendimiento
         const BATCH_SIZE = 5;
         const results: boolean[] = [];
         let processed = 0;
 
-        // Toast inicial
-        toast({
-            title: 'Iniciando importación...',
-            description: `Preparando ${entities.length} estudiante(s)`,
-        });
+        try {
+            for (let i = 0; i < entities.length; i += BATCH_SIZE) {
+                const batch = entities.slice(i, i + BATCH_SIZE);
+                const batchResults = await Promise.all(batch.map(entity => addEstudiante(entity, { silent: true })));
+                results.push(...batchResults);
+                processed += batch.length;
 
-        for (let i = 0; i < entities.length; i += BATCH_SIZE) {
-            const batch = entities.slice(i, i + BATCH_SIZE);
-            const batchResults = await Promise.all(batch.map(entity => addEstudiante(entity)));
-            results.push(...batchResults);
-            processed += batch.length;
-
-            // Actualizar progreso solo cada lote
-            if (processed < entities.length) {
-                const currentStudent = entities[Math.min(processed, entities.length - 1)]?.nombres || '';
-                toast({
-                    title: 'Importando estudiantes...',
-                    description: `${processed} de ${entities.length} procesados`,
-                });
+                // Actualizar progreso
+                setImportProgress(prev => ({
+                    ...prev,
+                    current: processed,
+                }));
             }
+
+            const successCount = results.filter(Boolean).length;
+
+            if (successCount > 0) {
+                await refreshEstudiantes();
+            }
+
+            // Mostrar estado final
+            setImportProgress(prev => ({
+                ...prev,
+                status: 'success',
+            }));
+
+            // Auto-cerrar después de 2 segundos
+            setTimeout(() => {
+                setImportProgress(prev => ({ ...prev, isOpen: false }));
+            }, 2000);
+        } catch (error) {
+            setImportProgress(prev => ({
+                ...prev,
+                status: 'error',
+            }));
+            
+            setTimeout(() => {
+                setImportProgress(prev => ({ ...prev, isOpen: false }));
+            }, 3000);
         }
-
-        const successCount = results.filter(Boolean).length;
-
-        if (successCount > 0) {
-            await refreshEstudiantes();
-        }
-
-        // Toast final
-        toast({
-            title: 'Importación completada',
-            description: `Se han añadido ${successCount} de ${entities.length} estudiante(s).`,
-        });
     };
     
     const handleDeleteEstudiante = async (numeroDocumento: string) => {
@@ -409,6 +433,16 @@ export default function SeccionDetailPage() {
                     />
                 </CardContent>
             </Card>
+            
+            {/* Modal de progreso de importación */}
+            <ImportProgressModal
+                isOpen={importProgress.isOpen}
+                title="Importando Estudiantes"
+                current={importProgress.current}
+                total={importProgress.total}
+                status={importProgress.status}
+                onClose={() => setImportProgress(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }
