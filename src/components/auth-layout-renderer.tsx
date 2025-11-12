@@ -4,7 +4,7 @@
 import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
-import Breadcrumb from '@/components/ui/breadcrumb';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { AuthGuard } from '@/components/auth-guard';
 import { OnboardingGuard } from '@/components/onboarding-guard';
 import { BottomNavigation } from '@/components/ui/bottom-navigation';

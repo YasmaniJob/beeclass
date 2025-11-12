@@ -1,16 +1,13 @@
 
 'use client';
 
-import { useState, useMemo } from "react";
-import Link from 'next/link';
-import { Docente } from "@/lib/definitions";
+import { useMemo } from "react";
+import { AreaCurricular } from "@/lib/definitions";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useToast } from "@/hooks/use-toast";
 import { useMatriculaData } from "@/hooks/use-matricula-data";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookUser, Contact2, ArrowRight, Users } from "lucide-react";
+import { BookUser, Users } from "lucide-react";
 import { PlaceholderContent } from "@/components/ui/placeholder-content";
 import { AreaCalificacionCard } from "@/components/evaluaciones/area-calificacion-card";
 import { useCompetencias } from "@/hooks/use-competencias";
@@ -18,11 +15,8 @@ import { useCompetencias } from "@/hooks/use-competencias";
 
 export default function MisClasesPage() {
     const { user } = useCurrentUser();
-    const { toast } = useToast();
     const { allAreas, estudiantesPorSeccion } = useMatriculaData();
     const { allCalificaciones: calificaciones } = useCompetencias();
-    
-    const [activeTab, setActiveTab] = useState('');
 
 
     const asignacionesAgrupadas = useMemo(() => {
@@ -79,8 +73,18 @@ export default function MisClasesPage() {
                 <div className="space-y-8">
                     {asignacionesAgrupadas.map(asig => {
                         const esTutor = asig.rol === 'Docente y Tutor';
-                        const nivel = asig.grado.includes('Secundaria') ? 'Secundaria' : 'Primaria';
-                        const areaTransversal = allAreas.find(a => a.nombre === 'Competencias Transversales' && a.nivel === nivel);
+                        // Detectar nivel: Secundaria incluye explícitamente "Secundaria" o grados 1-5
+                        const esSecundaria = asig.grado.includes('Secundaria') || 
+                                           ['1er Grado', '2do Grado', '3er Grado', '4to Grado', '5to Grado'].includes(asig.grado);
+                        const nivel = esSecundaria ? 'Secundaria' : 'Primaria';
+                        
+                        // Buscar área de competencias transversales con múltiples variantes
+                        const areaTransversal = allAreas.find(a => {
+                            const nombreMatch = a.nombre.toLowerCase().includes('competencias transversales') || 
+                                              a.nombre.toLowerCase().includes('transversales');
+                            const nivelMatch = a.nivel === nivel;
+                            return nombreMatch && nivelMatch;
+                        });
 
                         return (
                             <Card key={asig.id}>
@@ -100,17 +104,28 @@ export default function MisClasesPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        {esTutor && areaTransversal && (
-                                            <AreaCalificacionCard
-                                                key="transversal"
-                                                area={areaTransversal}
-                                                grado={asig.grado}
-                                                seccion={asig.seccion}
-                                                totalEstudiantes={asig.totalEstudiantes}
-                                                totalCalificados={new Set((calificacionesPorArea[areaTransversal.id]?.calif || []).map(c => c.estudianteId)).size}
-                                                isTransversal
-                                            />
-                                        )}
+                                        {/* Mostrar competencias transversales si tiene áreas asignadas O es tutor */}
+                                        {(asig.areasAsignadas.length > 0 || esTutor) && areaTransversal && areaTransversal.competencias.map(competencia => {
+                                            // Crear un área virtual para cada competencia transversal
+                                            const areaCompetencia: AreaCurricular = {
+                                                ...areaTransversal,
+                                                id: `${areaTransversal.id}-${competencia.id}`,
+                                                nombre: competencia.nombre,
+                                                competencias: [competencia]
+                                            };
+                                            
+                                            return (
+                                                <AreaCalificacionCard
+                                                    key={`transversal-${competencia.id}`}
+                                                    area={areaCompetencia}
+                                                    grado={asig.grado}
+                                                    seccion={asig.seccion}
+                                                    totalEstudiantes={asig.totalEstudiantes}
+                                                    totalCalificados={new Set((calificacionesPorArea[areaTransversal.id]?.calif || []).map(c => c.estudianteId)).size}
+                                                    isTransversal
+                                                />
+                                            );
+                                        })}
                                         {asig.areasAsignadas.map(area => {
                                             const totalCalificados = new Set((calificacionesPorArea[area.id]?.calif || []).map(c => c.estudianteId)).size;
                                             return (

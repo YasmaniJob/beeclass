@@ -24,7 +24,10 @@ export function useEvaluacionConfig() {
                 .single();
 
             if (error) {
-                console.error('Error loading config:', error);
+                // Solo mostrar error si no es "no rows returned" (PGRST116)
+                if (error.code !== 'PGRST116') {
+                    console.error('Error loading config:', error);
+                }
                 setConfigState(defaultConfig);
             } else if (data) {
                 setConfigState({

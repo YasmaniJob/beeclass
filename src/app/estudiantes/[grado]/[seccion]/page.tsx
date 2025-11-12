@@ -233,6 +233,46 @@ export default function SeccionDetailPage() {
         }
     };
 
+    const handleDeleteMultiple = async (numerosDocumento: string[]) => {
+        // Mostrar modal de progreso
+        setImportProgress({
+            isOpen: true,
+            current: 0,
+            total: numerosDocumento.length,
+            status: 'processing',
+        });
+
+        let successCount = 0;
+        for (let i = 0; i < numerosDocumento.length; i++) {
+            const success = await deleteEstudiante(numerosDocumento[i]);
+            if (success) successCount++;
+            
+            // Actualizar progreso
+            setImportProgress(prev => ({
+                ...prev,
+                current: i + 1,
+            }));
+        }
+
+        await refreshEstudiantes();
+
+        // Mostrar estado final
+        setImportProgress(prev => ({
+            ...prev,
+            status: successCount === numerosDocumento.length ? 'success' : 'error',
+        }));
+
+        // Auto-cerrar después de 2 segundos
+        setTimeout(() => {
+            setImportProgress(prev => ({ ...prev, isOpen: false }));
+            toast({
+                title: successCount === numerosDocumento.length ? 'Eliminación completada' : 'Eliminación parcial',
+                description: `Se eliminaron ${successCount} de ${numerosDocumento.length} estudiante(s).`,
+                variant: successCount === numerosDocumento.length ? 'default' : 'destructive',
+            });
+        }, 2000);
+    };
+
     const handleOpenEditDialog = (estudiante: Estudiante) => {
         setEditingEstudiante(estudiante);
         setIsIndividualDialogOpen(true);
@@ -429,15 +469,16 @@ export default function SeccionDetailPage() {
                         estudiantes={filteredEstudiantes}
                         onEdit={handleOpenEditDialog}
                         onDelete={handleDeleteEstudiante}
+                        onDeleteMultiple={handleDeleteMultiple}
                         onTransfer={handleTransfer}
                     />
                 </CardContent>
             </Card>
             
-            {/* Modal de progreso de importación */}
+            {/* Modal de progreso de importación/eliminación */}
             <ImportProgressModal
                 isOpen={importProgress.isOpen}
-                title="Importando Estudiantes"
+                title={importProgress.total > 0 && importProgress.current === 0 ? "Procesando..." : importProgress.status === 'processing' ? "Procesando Estudiantes" : importProgress.status === 'success' ? "Proceso Completado" : "Error en el Proceso"}
                 current={importProgress.current}
                 total={importProgress.total}
                 status={importProgress.status}

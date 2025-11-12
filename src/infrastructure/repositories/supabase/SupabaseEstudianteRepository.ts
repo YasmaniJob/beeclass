@@ -77,18 +77,35 @@ export class SupabaseEstudianteRepository implements EstudianteRepository {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('estudiantes')
-        .select('*')
-        .order('apellido_paterno', { ascending: true });
+      // Obtener todos los registros sin límite usando paginación
+      let allData: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (error) {
-        return failure(new DomainError(`Error fetching students: ${error.message}`));
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('estudiantes')
+          .select('*')
+          .order('apellido_paterno', { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (error) {
+          return failure(new DomainError(`Error fetching students: ${error.message}`));
+        }
+
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          from += pageSize;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
 
       const estudiantes: Estudiante[] = [];
 
-      for (const item of data || []) {
+      for (const item of allData) {
         const estudianteResult = Estudiante.crear(this.mapDbToInput(item));
         if (estudianteResult.isSuccess) {
           estudiantes.push(estudianteResult.value);

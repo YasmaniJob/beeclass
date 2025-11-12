@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DocenteEditable, docenteToEditable, editableToDocente } from '@/domain/mappers/docente-editable';
+import { ImportProgressModal } from '@/components/ui/import-progress-modal';
 
 export type DocenteFilters = {
     rol: string[];
@@ -37,6 +38,14 @@ export default function DocentesPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isMasivaOpen, setIsMasivaOpen] = useState(false);
     const [selectedDocente, setSelectedDocente] = useState<Docente | null>(null);
+    
+    // Estado para el modal de progreso
+    const [importProgress, setImportProgress] = useState({
+        isOpen: false,
+        current: 0,
+        total: 0,
+        status: 'processing' as 'processing' | 'success' | 'error',
+    });
 
     const handleSaveDocente = async (docenteData: Docente) => {
         try {
@@ -62,44 +71,57 @@ export default function DocentesPage() {
     };
 
     const handleMassSave = async (nuevosDocentes: Docente[]) => {
+        const BATCH_SIZE = 5;
+        let processed = 0;
+        const results: boolean[] = [];
+        
+        // Mostrar modal de progreso
+        setImportProgress({
+            isOpen: true,
+            current: 0,
+            total: nuevosDocentes.length,
+            status: 'processing',
+        });
+        
         try {
-            const BATCH_SIZE = 5;
-            let processed = 0;
-            const results: boolean[] = [];
-            
-            // Toast inicial
-            toast({ 
-                title: 'Iniciando importación...', 
-                description: `Preparando ${nuevosDocentes.length} miembro(s) del personal` 
-            });
-            
             for (let i = 0; i < nuevosDocentes.length; i += BATCH_SIZE) {
                 const batch = nuevosDocentes.slice(i, i + BATCH_SIZE);
-                const batchResults = await Promise.all(batch.map(docente => addDocente(docente)));
+                const batchResults = await Promise.all(batch.map(docente => addDocente(docente, { silent: true })));
                 results.push(...batchResults);
                 processed += batch.length;
                 
-                // Actualizar progreso solo cada lote
-                if (processed < nuevosDocentes.length) {
-                    toast({ 
-                        title: 'Importando personal...', 
-                        description: `${processed} de ${nuevosDocentes.length} procesados` 
-                    });
-                }
+                // Actualizar progreso
+                setImportProgress(prev => ({
+                    ...prev,
+                    current: processed,
+                }));
             }
             
             const successCount = results.filter(Boolean).length;
             
-            toast({ 
-                title: 'Importación completada', 
-                description: `Se han añadido ${successCount} de ${nuevosDocentes.length} miembros al personal.` 
-            });
+            // Mostrar estado final
+            setImportProgress(prev => ({
+                ...prev,
+                status: 'success',
+            }));
+            
+            // Auto-cerrar después de 2 segundos
+            setTimeout(() => {
+                setImportProgress(prev => ({ ...prev, isOpen: false }));
+                toast({ 
+                    title: 'Importación completada', 
+                    description: `Se han añadido ${successCount} de ${nuevosDocentes.length} miembros al personal.` 
+                });
+            }, 2000);
         } catch (error) {
-            toast({ 
-                variant: 'destructive',
-                title: 'Error', 
-                description: 'Error en la importación masiva.' 
-            });
+            setImportProgress(prev => ({
+                ...prev,
+                status: 'error',
+            }));
+            
+            setTimeout(() => {
+                setImportProgress(prev => ({ ...prev, isOpen: false }));
+            }, 3000);
         }
     };
 
@@ -218,6 +240,16 @@ export default function DocentesPage() {
                 </CardContent>
             </Card>
             )}
+            
+            {/* Modal de progreso de importación */}
+            <ImportProgressModal
+                isOpen={importProgress.isOpen}
+                title="Importando Personal"
+                current={importProgress.current}
+                total={importProgress.total}
+                status={importProgress.status}
+                onClose={() => setImportProgress(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }

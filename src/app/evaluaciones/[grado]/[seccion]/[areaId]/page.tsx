@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSesiones } from '@/hooks/use-sesiones';
-import { SesionFormDialog } from '@/components/evaluaciones/sesion-form-dialog';
+import { SesionesSheet } from '@/components/evaluaciones/sesiones-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useEvaluacionConfig } from '@/hooks/use-evaluacion-config';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,10 +51,11 @@ export default function LibretaDeNotasPage() {
         estudiantesConPromedios,
         calificacionesPorEstudianteYCompetencia,
         sesiones,
+        sesionesDelArea,
         isLoading,
     } = useCalificaciones(grado, seccion, areaId);
 
-    const [isSesionDialogOpen, setIsSesionDialogOpen] = useState(false);
+    const [isSesionSheetOpen, setIsSesionSheetOpen] = useState(false);
     const [desgloseState, setDesgloseState] = useState<{
         isOpen: boolean;
         estudiante: Estudiante | null;
@@ -94,9 +95,36 @@ export default function LibretaDeNotasPage() {
             title: 'Sesión Creada',
             description: `La sesión "${titulo}" ha sido creada con éxito.`,
         });
-        setIsSesionDialogOpen(false);
+        setIsSesionSheetOpen(false);
         router.push(`/evaluaciones/${encodeURIComponent(grado)}/${encodeURIComponent(seccion)}/${encodeURIComponent(areaId)}/${newSesion.id}`);
     }
+
+    // Calcular progreso de calificaciones por sesión
+    const calificacionesPorSesion = useMemo(() => {
+        const map = new Map<string, { calificados: number; total: number }>();
+        const totalEstudiantes = estudiantesConPromedios.length;
+
+        sesionesDelArea.forEach((sesion: SesionAprendizaje) => {
+            const estudiantesCalificados = new Set<string>();
+            
+            calificacionesPorEstudianteYCompetencia.forEach(compMap => {
+                compMap.forEach(calificaciones => {
+                    calificaciones.forEach(cal => {
+                        if (cal.sesionId === sesion.id) {
+                            estudiantesCalificados.add(cal.estudianteId);
+                        }
+                    });
+                });
+            });
+
+            map.set(sesion.id, {
+                calificados: estudiantesCalificados.size,
+                total: totalEstudiantes
+            });
+        });
+
+        return map;
+    }, [sesionesDelArea, calificacionesPorEstudianteYCompetencia, estudiantesConPromedios]);
 
     const handleOpenDesglose = (estudiante: Estudiante, competencia: Competencia) => {
         const calificacionesEstudiante = calificacionesPorEstudianteYCompetencia.get(estudiante.numeroDocumento)?.get(competencia.id) || [];
@@ -160,7 +188,7 @@ export default function LibretaDeNotasPage() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button onClick={() => setIsSesionDialogOpen(true)}>
+                    <Button onClick={() => setIsSesionSheetOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Añadir Sesión
                     </Button>
@@ -241,11 +269,15 @@ export default function LibretaDeNotasPage() {
                     </Button>
                 </div>
             )}
-            <SesionFormDialog
-                open={isSesionDialogOpen}
-                onOpenChange={setIsSesionDialogOpen}
-                onSave={handleSaveSesion}
+            <SesionesSheet
+                open={isSesionSheetOpen}
+                onOpenChange={setIsSesionSheetOpen}
                 area={area}
+                grado={grado}
+                seccion={seccion}
+                sesiones={sesionesDelArea}
+                onCreateSesion={handleSaveSesion}
+                calificacionesPorSesion={calificacionesPorSesion}
             />
 
             <CalificacionesDesgloseSheet

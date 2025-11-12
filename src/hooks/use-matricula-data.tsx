@@ -196,6 +196,10 @@ export function MatriculaDataProvider({ children }: { children: ReactNode }) {
 
     const estudiantes = supabaseReady ? (supEstudiantes || []) : [];
     const docentes = supabaseReady ? (supDocentes || []) : [];
+    
+    // Filtrar áreas solo por nivel de institución
+    // IMPORTANTE: allAreas incluirá Competencias Transversales para que estén disponibles
+    // globalmente en componentes como el panel de docentes
     const areas = supabaseReady
       ? (supAreas || []).filter(area => (area.nivel as Nivel | undefined) === nivelInstitucion)
       : [];
@@ -209,11 +213,16 @@ export function MatriculaDataProvider({ children }: { children: ReactNode }) {
         });
     });
 
+    // Construir areasPorGrado excluyendo Competencias Transversales
+    // RAZÓN: Las competencias transversales no se asignan a grados específicos,
+    // se manejan globalmente y están disponibles para todos los docentes con áreas asignadas.
+    // Los componentes que necesiten transversales deben buscarlas en allAreas.
     const newAreasPorGrado: Record<string, AreaCurricular[]> = {};
     allGradosFinal.forEach(grado => {
         const nivel = gradoNivelMap[grado] ?? inferNivelFromGrado(grado);
         newAreasPorGrado[grado] = areas.filter((a: AreaCurricular) => {
             const areaNivel = (a.nivel as Nivel | undefined) ?? inferNivelFromGrado(grado);
+            // Excluir Competencias Transversales de areasPorGrado porque se manejan globalmente
             return areaNivel === nivel && a.nombre !== 'Competencias Transversales';
         });
     });
@@ -244,7 +253,10 @@ export function MatriculaDataProvider({ children }: { children: ReactNode }) {
         docentes,
         niveles: nivelesList,
         areas,
+        // allAreas contiene TODAS las áreas del nivel, incluyendo Competencias Transversales
+        // Esto permite que componentes como el panel de docentes accedan a las transversales
         allAreas: areas,
+        // areasPorGrado NO incluye Competencias Transversales (ver filtro arriba)
         areasPorGrado: newAreasPorGrado,
         incidentes: dbState.incidentes,
         permisos: dbState.permisos,

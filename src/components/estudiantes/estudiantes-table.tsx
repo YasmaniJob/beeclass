@@ -13,26 +13,31 @@ import { TrasladarEstudianteDialog } from '@/components/estudiantes/trasladar-es
 import { PaginationControls } from '../ui/pagination-controls';
 import { CardFooter } from '../ui/card';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EstudiantesTableProps {
     estudiantes: Estudiante[];
     onEdit: (estudiante: Estudiante) => void;
     onDelete: (numeroDocumento: string) => void;
+    onDeleteMultiple?: (numerosDocumento: string[]) => void;
     onTransfer: (numeroDocumento: string, newGrado: string, newSeccion: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function EstudiantesTable({ estudiantes, onEdit, onDelete, onTransfer }: EstudiantesTableProps) {
+export function EstudiantesTable({ estudiantes, onEdit, onDelete, onDeleteMultiple, onTransfer }: EstudiantesTableProps) {
     const [currentPage, setCurrentPage] = useState(1);
     const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
     const [transferringEstudiante, setTransferringEstudiante] = useState<Estudiante | null>(null);
+    const [selectedEstudiantes, setSelectedEstudiantes] = useState<Set<string>>(new Set());
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const { user } = useCurrentUser();
     const isAdmin = user?.rol === 'Admin';
 
 
     useEffect(() => {
         setCurrentPage(1);
+        setSelectedEstudiantes(new Set());
     }, [estudiantes]);
 
     const totalPages = Math.ceil(estudiantes.length / ITEMS_PER_PAGE);
@@ -51,7 +56,33 @@ export function EstudiantesTable({ estudiantes, onEdit, onDelete, onTransfer }: 
             setIsTransferDialogOpen(false);
             setTransferringEstudiante(null);
         }
-    }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedEstudiantes.size === paginatedEstudiantes.length) {
+            setSelectedEstudiantes(new Set());
+        } else {
+            setSelectedEstudiantes(new Set(paginatedEstudiantes.map(e => e.numeroDocumento)));
+        }
+    };
+
+    const toggleSelectEstudiante = (numeroDocumento: string) => {
+        const newSelected = new Set(selectedEstudiantes);
+        if (newSelected.has(numeroDocumento)) {
+            newSelected.delete(numeroDocumento);
+        } else {
+            newSelected.add(numeroDocumento);
+        }
+        setSelectedEstudiantes(newSelected);
+    };
+
+    const handleDeleteMultiple = () => {
+        if (onDeleteMultiple && selectedEstudiantes.size > 0) {
+            onDeleteMultiple(Array.from(selectedEstudiantes));
+            setSelectedEstudiantes(new Set());
+            setIsDeleteDialogOpen(false);
+        }
+    };
 
     if (estudiantes.length === 0) {
         return (
@@ -67,9 +98,47 @@ export function EstudiantesTable({ estudiantes, onEdit, onDelete, onTransfer }: 
 
     return (
         <>
+            {isAdmin && selectedEstudiantes.size > 0 && (
+                <div className="flex items-center justify-between p-4 bg-muted/50 border-b">
+                    <span className="text-sm font-medium">
+                        {selectedEstudiantes.size} estudiante(s) seleccionado(s)
+                    </span>
+                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar seleccionados
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. Se eliminarán <strong className="font-medium">{selectedEstudiantes.size}</strong> estudiante(s) de la sección.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteMultiple} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                    Eliminar {selectedEstudiantes.size} estudiante(s)
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
             <Table>
                 <TableHeader>
                     <TableRow>
+                        {isAdmin && onDeleteMultiple && (
+                            <TableHead className="w-[50px]">
+                                <Checkbox
+                                    checked={selectedEstudiantes.size === paginatedEstudiantes.length && paginatedEstudiantes.length > 0}
+                                    onCheckedChange={toggleSelectAll}
+                                    aria-label="Seleccionar todos"
+                                />
+                            </TableHead>
+                        )}
                         <TableHead className="w-[50px]">N°</TableHead>
                         <TableHead>Apellido Paterno</TableHead>
                         <TableHead>Apellido Materno</TableHead>
@@ -84,6 +153,15 @@ export function EstudiantesTable({ estudiantes, onEdit, onDelete, onTransfer }: 
                 <TableBody>
                     {paginatedEstudiantes.map((estudiante, index) => (
                         <TableRow key={estudiante.numeroDocumento}>
+                            {isAdmin && onDeleteMultiple && (
+                                <TableCell>
+                                    <Checkbox
+                                        checked={selectedEstudiantes.has(estudiante.numeroDocumento)}
+                                        onCheckedChange={() => toggleSelectEstudiante(estudiante.numeroDocumento)}
+                                        aria-label={`Seleccionar ${estudiante.nombres} ${estudiante.apellidoPaterno}`}
+                                    />
+                                </TableCell>
+                            )}
                             <TableCell>{startIndex + index + 1}</TableCell>
                             <TableCell className="font-medium">{estudiante.apellidoPaterno}</TableCell>
                             <TableCell>{estudiante.apellidoMaterno}</TableCell>

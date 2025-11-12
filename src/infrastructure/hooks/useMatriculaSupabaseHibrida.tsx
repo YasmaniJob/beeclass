@@ -65,12 +65,12 @@ interface MatriculaSupabaseHibridaContextType {
   refreshGradosSecciones: () => Promise<void>;
 
   // Funciones CRUD Estudiantes (Supabase)
-  addEstudiante: (estudiante: Estudiante) => Promise<boolean>;
+  addEstudiante: (estudiante: Estudiante, options?: { silent?: boolean }) => Promise<boolean>;
   updateEstudiante: (numeroDocumento: string, estudiante: Partial<Estudiante>) => Promise<boolean>;
   deleteEstudiante: (numeroDocumento: string) => Promise<boolean>;
 
   // Funciones CRUD Personal (Supabase)
-  addPersonal: (personal: Docente) => Promise<boolean>;
+  addPersonal: (personal: Docente, options?: { silent?: boolean }) => Promise<boolean>;
   updatePersonal: (numeroDocumento: string, personal: Partial<Docente>) => Promise<boolean>;
   deletePersonal: (numeroDocumento: string) => Promise<boolean>;
 
@@ -272,29 +272,34 @@ export function MatriculaSupabaseHibridaProvider({
     if (isAppConfigLoaded) {
       refreshEstudiantes();
       refreshPersonal();
-      refreshAreasCurriculares();
+      // Cargar áreas con el nivel de institución para incluir competencias transversales
+      refreshAreasCurriculares(nivelInstitucion.toLowerCase());
       refreshGradosSecciones();
       setIsLoaded(true);
     }
-  }, [isAppConfigLoaded, refreshEstudiantes, refreshPersonal, refreshAreasCurriculares, refreshGradosSecciones]);
+  }, [isAppConfigLoaded, nivelInstitucion, refreshEstudiantes, refreshPersonal, refreshAreasCurriculares, refreshGradosSecciones]);
 
   // Funciones CRUD Estudiantes (Supabase)
-  const addEstudiante = useCallback(async (estudiante: Estudiante): Promise<boolean> => {
+  const addEstudiante = useCallback(async (estudiante: Estudiante, options?: { silent?: boolean }): Promise<boolean> => {
     try {
       const result = await estudianteRepo.guardar(estudiante);
       if (result.isSuccess) {
         await refreshEstudiantes();
-        toast({
-          title: 'Éxito',
-          description: 'Estudiante agregado correctamente'
-        });
+        if (!options?.silent) {
+          toast({
+            title: 'Éxito',
+            description: 'Estudiante agregado correctamente'
+          });
+        }
         return true;
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'No se pudo agregar el estudiante'
-        });
+        if (!options?.silent) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No se pudo agregar el estudiante'
+          });
+        }
         return false;
       }
     } catch (error) {
@@ -395,7 +400,7 @@ export function MatriculaSupabaseHibridaProvider({
   }, [refreshEstudiantes, toast]);
 
   // Funciones CRUD Personal (Supabase)
-  const addPersonal = useCallback(async (personalData: Docente): Promise<boolean> => {
+  const addPersonal = useCallback(async (personalData: Docente, options?: { silent?: boolean }): Promise<boolean> => {
     try {
       const result = await personalRepo.save(personalData);
       if (result.isSuccess) {
@@ -405,17 +410,21 @@ export function MatriculaSupabaseHibridaProvider({
           clearPersonalCache();
         }
         await refreshPersonal(true);
-        toast({
-          title: 'Éxito',
-          description: 'Personal agregado correctamente'
-        });
+        if (!options?.silent) {
+          toast({
+            title: 'Éxito',
+            description: 'Personal agregado correctamente'
+          });
+        }
         return true;
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'No se pudo agregar el personal'
-        });
+        if (!options?.silent) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No se pudo agregar el personal'
+          });
+        }
         return false;
       }
     } catch (error) {

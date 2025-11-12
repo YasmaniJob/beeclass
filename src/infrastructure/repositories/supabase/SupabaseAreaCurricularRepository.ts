@@ -69,8 +69,20 @@ export class SupabaseAreaCurricularRepository {
         return failure(new DomainError(`Error fetching competencies: ${competenciasError.message}`));
       }
 
-      // Obtener todas las capacidades en una sola query
-      const competenciaIds = (competencias || []).map(c => c.id);
+      // También obtener competencias transversales (area_id = NULL)
+      const { data: competenciasTransversales, error: transversalesError } = await supabase
+        .from('competencias')
+        .select('*')
+        .is('area_id', null)
+        .eq('es_transversal', true)
+        .order('orden', { ascending: true });
+
+      if (transversalesError) {
+        return failure(new DomainError(`Error fetching transversal competencies: ${transversalesError.message}`));
+      }
+
+      // Obtener todas las capacidades en una sola query (incluyendo transversales)
+      const competenciaIds = [...(competencias || []).map(c => c.id), ...(competenciasTransversales || []).map(c => c.id)];
       const { data: capacidades, error: capacidadesError } = await supabase
         .from('capacidades')
         .select('*')
@@ -110,6 +122,28 @@ export class SupabaseAreaCurricularRepository {
         nivel: (area.niveles?.nombre || area.nivel_id) as Nivel,
         competencias: competenciasPorArea.get(area.id) || []
       }));
+
+      // Agregar área virtual de Competencias Transversales si existen
+      if (competenciasTransversales && competenciasTransversales.length > 0) {
+        const competenciasTransversalesConCapacidades = competenciasTransversales.map(comp => {
+          const caps = capacidadesPorCompetencia.get(comp.id) || [];
+          return {
+            id: comp.id,
+            nombre: comp.nombre,
+            descripcion: comp.descripcion,
+            capacidades: caps.map(c => c.nombre)
+          };
+        });
+
+        const areaTransversal: AreaCurricular = {
+          id: `transversal-${nivelId}`,
+          nombre: 'Competencias Transversales',
+          nivel: nivel,
+          competencias: competenciasTransversalesConCapacidades
+        };
+
+        areasCompletas.push(areaTransversal);
+      }
 
       return success(areasCompletas);
     } catch (error) {
